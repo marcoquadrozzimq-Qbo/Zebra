@@ -29,6 +29,7 @@
 
 <h2>Codice ZPL generato:</h2>
 <pre id="zplOutput"></pre>
+<button id="downloadBtn">Scarica ZPL</button>
 
 <script>
 function convertCanvasToZPL(canvas) {
@@ -42,10 +43,11 @@ function convertCanvasToZPL(canvas) {
     let row = '';
     for(let x = 0; x < width; x++){
       const i = (y*width + x)*4;
-      const bw = imageData[i] < 128 ? '1' : '0'; // 1-bit bianco/nero
+      const bw = imageData[i] < 128 ? '1' : '0';
       row += bw;
     }
-    zpl += `^FO0,${y}^GB${width},1,1,B,${row}^FS\n`; // semplice esempio di riga
+    // Qui si usa ^FO e ^GB per esempio; puoi adattare in base alla stampante
+    zpl += `^FO0,${y}^GB${width},1,1,B,${row}^FS\n`;
   }
   zpl += `^XZ`;
   return zpl;
@@ -86,8 +88,20 @@ document.getElementById('convertBtn').addEventListener('click', () => {
   };
   reader.readAsDataURL(fileInput.files[0]);
 });
+
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const zplContent = document.getElementById('zplOutput').textContent;
+  if (!zplContent) return alert('Genera prima il ZPL');
+
+  const blob = new Blob([zplContent], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'etichette.zpl';
+  a.click();
+  URL.revokeObjectURL(url);
+});
 </script>
 
 </body>
 </html>
-
