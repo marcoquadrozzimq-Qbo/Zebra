@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZPL Image Converter</title>
+<style>
+  body { font-family: Arial; background:#f5f5f5; padding:20px; }
+  .container { max-width:500px; background:white; margin:0 auto; padding:20px; border-radius:15px; box-shadow:0 4px 10px rgba(0,0,0,0.1); text-align:center;}
+  h1 { color:#333; }
+  input[type="file"], button, textarea { width:100%; margin:10px 0; padding:10px; font-size:1em; border-radius:6px; border:1px solid #ccc; }
+  button { background:#007AFF; color:white; font-weight:bold; border:none; cursor:pointer; }
+  button:hover { background:#005BBB; }
+  canvas { display:block; margin:10px auto; border:1px solid #ddd; max-width:100%; }
+  textarea { height:180px; font-family:monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Convertitore Immagine → ZPL</h1>
+<input type="file" id="imageInput" accept="image/*">
+<canvas id="previewCanvas"></canvas>
+<button id="convertBtn">Converti in ZPL</button>
+<textarea id="output" readonly placeholder="Qui apparirà il codice ZPL..."></textarea>
+<button id="downloadBtn">Scarica .zpl</button>
+</div>
+
+<script>
+const imageInput = document.getElementById('imageInput');
+const previewCanvas = document.getElementById('previewCanvas');
+const ctx = previewCanvas.getContext('2d');
+const output = document.getElementById('output');
+let imageLoaded = false;
+
+imageInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const maxWidth = 400;
+    const scale = Math.min(maxWidth / img.width,1);
+    previewCanvas.width = img.width*scale;
+    previewCanvas.height = img.height*scale;
+    ctx.drawImage(img,0,0,previewCanvas.width,previewCanvas.height);
+    imageLoaded = true;
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+document.getElementById('convertBtn').addEventListener('click', ()=>{
+  if(!imageLoaded){ alert("Carica prima un'immagine!"); return; }
+
+  const w = previewCanvas.width;
+  const h = previewCanvas.height;
+  const imgData = ctx.getImageData(0,0,w,h);
+  const pixels = imgData.data;
+  let zplData = "";
+  const bytesPerRow = Math.ceil(w/8);
+  const totalBytes = bytesPerRow * h;
+
+  for(let y=0; y<h; y++){
+    let row="";
+    for(let x=0;x<w;x+=8){
+      let byte=0;
+      for(let b=0;b<8;b++){
+        const px=x+b;
+        const idx=(y*w+px)*4;
+        if(px<w){
+          const avg=(pixels[idx]+pixels[idx+1]+pixels[idx+2])/3;
+          const bit=avg<128?1:0;
+          byte=(byte<<1)|bit;
+        }else{ byte=(byte<<1);}
+      }
+      row += byte.toString(16).padStart(2,'0').toUpperCase();
+    }
+    zplData += row + "\n";
+  }
+
+  const fileName="IMAGE.GRF";
+  const zpl=`~DG${fileName},${totalBytes},${bytesPerRow},\n${zplData}^XA\n^FO50,50\n^XG${fileName},1,1^FS\n^XZ`;
+  output.value = zpl;
+});
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const zplCode = output.value;
+  if(!zplCode.trim()){ alert("Converti prima un'immagine!"); return; }
+  const blob = new Blob([zplCode], {type:'text/plain'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download='immagine.zpl';
+  link.click();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZPL Multi-line Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .container {
+      max-width: 420px;
+      background: white;
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    input, select, button, textarea {
+      width: 100%;
+      margin-top: 5px;
+      padding: 8px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #007AFF;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button:hover {
+      background-color: #005BBB;
+    }
+    textarea {
+      font-family: monospace;
+      height: 120px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generatore ZPL Multiriga</h1>
+  <div class="container">
+    <label>Testo da stampare (puoi andare a capo):</label>
+    <textarea id="textInput" placeholder="Scrivi qui... ogni riga verrà stampata sotto l’altra"></textarea>
+
+    <label>Posizione X iniziale:</label>
+    <input type="number" id="posX" value="50">
+
+    <label>Posizione Y iniziale:</label>
+    <input type="number" id="posY" value="50">
+
+    <label>Distanza tra righe (pixel):</label>
+    <input type="number" id="lineSpacing" value="60">
+
+    <label>Altezza font:</label>
+    <input type="number" id="fontHeight" value="50">
+
+    <label>Larghezza font:</label>
+    <input type="number" id="fontWidth" value="50">
+
+    <label>Orientamento:</label>
+    <select id="orientation">
+      <option value="N">Orizzontale</option>
+      <option value="R">Verticale (dal basso verso l’alto)</option>
+      <option value="B">Verticale (dall’alto verso il basso)</option>
+      <option value="I">Ruotato 180°</option>
+    </select>
+
+    <button id="generateBtn">Genera ZPL</button>
+    <textarea id="output" readonly placeholder="Qui apparirà il codice ZPL..."></textarea>
+    <button id="downloadBtn">Scarica .zpl</button>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const generateBtn = document.getElementById("generateBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      generateBtn.addEventListener("click", () => {
+        const text = document.getElementById('textInput').value;
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const x = parseInt(document.getElementById('posX').value);
+        const yStart = parseInt(document.getElementById('posY').value);
+        const spacing = parseInt(document.getElementById('lineSpacing').value);
+        const h = document.getElementById('fontHeight').value;
+        const w = document.getElementById('fontWidth').value;
+        const o = document.getElementById('orientation').value;
+
+        if (lines.length === 0) {
+          alert("Inserisci almeno una riga di testo!");
+          return;
+        }
+
+        let zpl = "^XA\n";
+        lines.forEach((line, i) => {
+          const y = yStart + (i * spacing);
+          zpl += `^FO${x},${y}\n^A0${o},${h},${w}\n^FD${line}^FS\n`;
+        });
+        zpl += "^XZ";
+
+        document.getElementById('output').value = zpl;
+      });
+
+      downloadBtn.addEventListener("click", () => {
+        const zplCode = document.getElementById('output').value;
+        if (!zplCode.trim()) {
+          alert("Genera prima il codice ZPL!");
+          return;
+        }
+        const blob = new Blob([zplCode], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'etichetta.zpl';
+        link.click();
+      });
+    });
+  </script>
+</body>
+</html>
