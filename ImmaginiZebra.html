@@ -3,54 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Convertitore Immagini in ZPL</title>
+<title>Convertitore Immagini in ZPL (Z64)</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  input, button { margin: 5px 0; display: block; }
+  body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
+  input, button { margin: 8px 0; display: block; width: 100%; padding: 6px; }
   pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; word-wrap: break-word; }
 </style>
 </head>
 <body>
-<h1>Convertitore Immagini in ZPL</h1>
+<h1>🖼️ Convertitore Immagini in ZPL (Z64)</h1>
 
 <label>Seleziona immagine (bianco/nero consigliato):
   <input type="file" id="imgFile" accept="image/*">
 </label>
 
 <label>Larghezza (px):
-  <input type="number" id="imgWidth" value="1200">
+  <input type="number" id="imgWidth" value="600">
 </label>
 
 <label>Altezza (px):
-  <input type="number" id="imgHeight" value="800">
+  <input type="number" id="imgHeight" value="400">
 </label>
 
 <button id="convertBtn">Converti in ZPL</button>
 
 <h2>Codice ZPL generato:</h2>
 <pre id="zplOutput"></pre>
-<button id="downloadBtn">Scarica ZPL</button>
+<button id="downloadBtn">📥 Scarica ZPL</button>
 
 <script>
-function convertCanvasToZPL(canvas) {
-  const width = canvas.width;
-  const height = canvas.height;
+// Funzione per convertire immagine in bianco e nero e generare il blocco Z64
+function imageToZ64(canvas) {
   const ctx = canvas.getContext('2d');
-  const imageData = ctx.getImageData(0, 0, width, height).data;
-  
-  let zpl = `^XA\n`;
-  for(let y = 0; y < height; y++){
-    let row = '';
-    for(let x = 0; x < width; x++){
-      const i = (y*width + x)*4;
-      const bw = imageData[i] < 128 ? '1' : '0';
-      row += bw;
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const bytesPerRow = Math.ceil(canvas.width / 8);
+  let binaryData = new Uint8Array(bytesPerRow * canvas.height);
+
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const i = (y * canvas.width + x) * 4;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const gray = 0.3 * r + 0.59 * g + 0.11 * b;
+      if (gray < 128) {
+        const byteIndex = y * bytesPerRow + (x >> 3);
+        binaryData[byteIndex] |= (0x80 >> (x % 8));
+      }
     }
-    // Qui si usa ^FO e ^GB per esempio; puoi adattare in base alla stampante
-    zpl += `^FO0,${y}^GB${width},1,1,B,${row}^FS\n`;
   }
-  zpl += `^XZ`;
-  return zpl;
+
+  // Converte in base64 e comprime (Z64)
+  const binaryString = String.fromCharCode(...binaryData);
+  const base64 = btoa(binaryString);
+  return `~DGR:IMAGE.GRF,${binaryData.length},${bytesPerRow},${base64}\n^XA\n^FO0,0^XGR:IMAGE.GRF,1,1^FS\n^XZ`;
 }
 
 document.getElementById('convertBtn').addEventListener('click', () => {
@@ -58,7 +63,7 @@ document.getElementById('convertBtn').addEventListener('click', () => {
   const width = parseInt(document.getElementById('imgWidth').value);
   const height = parseInt(document.getElementById('imgHeight').value);
 
-  if (!fileInput.files.length) return alert('Seleziona un file');
+  if (!fileInput.files.length) return alert('Seleziona un file immagine!');
 
   const reader = new FileReader();
   reader.onload = function(e) {
@@ -70,18 +75,8 @@ document.getElementById('convertBtn').addEventListener('click', () => {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Conversione in bianco e nero
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const data = imageData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
-        const bw = gray > 128 ? 255 : 0;
-        data[i] = data[i+1] = data[i+2] = bw;
-      }
-      ctx.putImageData(imageData, 0, 0);
-
-      // Genera ZPL
-      const zpl = convertCanvasToZPL(canvas);
+      // Converte in Z64
+      const zpl = imageToZ64(canvas);
       document.getElementById('zplOutput').textContent = zpl;
     };
     img.src = e.target.result;
@@ -91,13 +86,13 @@ document.getElementById('convertBtn').addEventListener('click', () => {
 
 document.getElementById('downloadBtn').addEventListener('click', () => {
   const zplContent = document.getElementById('zplOutput').textContent;
-  if (!zplContent) return alert('Genera prima il ZPL');
+  if (!zplContent) return alert('Genera prima il codice ZPL!');
 
   const blob = new Blob([zplContent], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'etichette.zpl';
+  a.download = 'immagine_zebra.zpl';
   a.click();
   URL.revokeObjectURL(url);
 });
