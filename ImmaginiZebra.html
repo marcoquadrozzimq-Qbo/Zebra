@@ -2,105 +2,93 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Convertitore Immagini in ZPL (Z64)</title>
+<title>Convertitore Immagini Zebra ZPL</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
-  input, button { margin: 8px 0; padding: 6px; }
-  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-  .btn-row button { flex: 1; min-width: 45%; }
-  pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: scroll; }
+  body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+  h2 { color: #333; }
+  input, button { margin: 10px 5px; padding: 8px; font-size: 15px; }
+  #preview { margin-top: 20px; max-width: 300px; }
+  #result { width: 100%; height: 200px; }
+  .row { display: flex; align-items: center; gap: 10px; }
 </style>
 </head>
 <body>
-<h1>🖼️ Convertitore Immagini in ZPL (Z64)</h1>
+  <h2>🖼️ Convertitore Immagini → ZPL (ZT420)</h2>
 
-<label>Seleziona immagine (bianco/nero consigliato):
-  <input type="file" id="imgFile" accept="image/*">
-</label>
+  <div class="row">
+    <input type="file" id="imageInput" accept="image/*">
+    <input type="number" id="width" placeholder="Larghezza px" style="width:120px;">
+    <input type="number" id="height" placeholder="Altezza px" style="width:120px;">
+    <button id="convertBtn">Converti</button>
+    <button id="downloadBtn" disabled>Scarica ZPL</button>
+  </div>
 
-<label>Larghezza (px):
-  <input type="number" id="imgWidth" value="600">
-</label>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <img id="preview" alt="Anteprima immagine">
+  <textarea id="result" readonly placeholder="Il codice ZPL apparirà qui..."></textarea>
 
-<label>Altezza (px):
-  <input type="number" id="imgHeight" value="400">
-</label>
-
-<div class="btn-row">
-  <button id="convertBtn">⚙️ Converti in ZPL</button>
-  <button id="downloadBtn">📥 Scarica ZPL</button>
-</div>
-
-<h2>Codice ZPL generato:</h2>
-<pre id="zplOutput"></pre>
-
-<script>
-// Funzione per convertire immagine in bianco e nero e generare blocco Z64
-function imageToZ64(canvas) {
+  <script>
+  const imgInput = document.getElementById('imageInput');
+  const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  const bytesPerRow = Math.ceil(canvas.width / 8);
-  let binaryData = new Uint8Array(bytesPerRow * canvas.height);
+  const result = document.getElementById('result');
+  const preview = document.getElementById('preview');
+  const convertBtn = document.getElementById('convertBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
 
-  for (let y = 0; y < canvas.height; y++) {
-    for (let x = 0; x < canvas.width; x++) {
-      const i = (y * canvas.width + x) * 4;
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      const gray = 0.3 * r + 0.59 * g + 0.11 * b;
-      if (gray < 128) {
-        const byteIndex = y * bytesPerRow + (x >> 3);
-        binaryData[byteIndex] |= (0x80 >> (x % 8));
-      }
-    }
-  }
+  let zplCode = "";
 
-  const binaryString = String.fromCharCode(...binaryData);
-  const base64 = btoa(binaryString);
-  return `~DGR:IMAGE.GRF,${binaryData.length},${bytesPerRow},${base64}\n^XA\n^FO0,0^XGR:IMAGE.GRF,1,1^FS\n^XZ`;
-}
+  convertBtn.addEventListener('click', async () => {
+    const file = imgInput.files[0];
+    if (!file) return alert("Seleziona un'immagine prima.");
+    const width = parseInt(document.getElementById('width').value) || 300;
+    const height = parseInt(document.getElementById('height').value) || 300;
 
-document.getElementById('convertBtn').addEventListener('click', () => {
-  const fileInput = document.getElementById('imgFile');
-  const width = parseInt(document.getElementById('imgWidth').value);
-  const height = parseInt(document.getElementById('imgHeight').value);
-
-  if (!fileInput.files.length) return alert('Seleziona un file immagine!');
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
     const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
+    img.src = URL.createObjectURL(file);
+    await img.decode();
 
-      // Genera codice Z64
-      const zpl = imageToZ64(canvas);
-      document.getElementById('zplOutput').textContent = zpl;
-      alert('✅ Conversione completata! Ora puoi scaricare il file.');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(fileInput.files[0]);
-});
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(img, 0, 0, width, height);
 
-document.getElementById('downloadBtn').addEventListener('click', () => {
-  const zplContent = document.getElementById('zplOutput').textContent;
-  if (!zplContent) return alert('Genera prima il codice ZPL!');
+    const imageData = ctx.getImageData(0, 0, width, height).data;
 
-  const blob = new Blob([zplContent], { type: 'text/plain' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'immagine_zebra.zpl';
-  a.click();
-  URL.revokeObjectURL(url);
-});
-</script>
+    let hexLine = "";
+    let zplData = "";
 
+    for (let y = 0; y < height; y++) {
+      let line = "";
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
+        line += avg > 127 ? "0" : "1";
+      }
+      let hex = "";
+      for (let i = 0; i < line.length; i += 8) {
+        hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, '0');
+      }
+      zplData += hex.toUpperCase() + "\n";
+    }
+
+    const bytesPerRow = Math.ceil(width / 8);
+    const totalBytes = bytesPerRow * height;
+
+    // Costruzione del file ZPL completo
+    zplCode = `~DGIMAGE.GRF,${totalBytes},${bytesPerRow},\n${zplData}\n^XA\n^FO50,50\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+
+    result.value = zplCode;
+    preview.src = canvas.toDataURL();
+    downloadBtn.disabled = false;
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([zplCode], { type: "text/plain" });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "immagine_zebra.zpl";
+    a.click();
+  });
+  </script>
 </body>
 </html>
