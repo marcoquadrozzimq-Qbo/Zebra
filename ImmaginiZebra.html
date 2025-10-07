@@ -6,8 +6,9 @@
 <title>Convertitore Immagini in ZPL (Z64)</title>
 <style>
   body { font-family: Arial, sans-serif; margin: 20px; max-width: 600px; }
-  input, button { margin: 8px 0; display: block; width: 100%; padding: 6px; }
-  pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; word-wrap: break-word; }
+  input, button { margin: 8px 0; padding: 6px; }
+  .btn-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: scroll; }
 </style>
 </head>
 <body>
@@ -25,11 +26,13 @@
   <input type="number" id="imgHeight" value="400">
 </label>
 
-<button id="convertBtn">Converti in ZPL</button>
+<div class="btn-row">
+  <button id="convertBtn">Converti in ZPL</button>
+  <button id="downloadBtn">📥 Scarica ZPL</button>
+</div>
 
 <h2>Codice ZPL generato:</h2>
 <pre id="zplOutput"></pre>
-<button id="downloadBtn">📥 Scarica ZPL</button>
 
 <script>
 // Funzione per convertire immagine in bianco e nero e generare il blocco Z64
@@ -52,7 +55,6 @@ function imageToZ64(canvas) {
     }
   }
 
-  // Converte in base64 e comprime (Z64)
   const binaryString = String.fromCharCode(...binaryData);
   const base64 = btoa(binaryString);
   return `~DGR:IMAGE.GRF,${binaryData.length},${bytesPerRow},${base64}\n^XA\n^FO0,0^XGR:IMAGE.GRF,1,1^FS\n^XZ`;
@@ -75,9 +77,10 @@ document.getElementById('convertBtn').addEventListener('click', () => {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Converte in Z64
+      // Genera codice Z64
       const zpl = imageToZ64(canvas);
       document.getElementById('zplOutput').textContent = zpl;
+      alert('✅ Conversione completata! Ora puoi scaricare il file.');
     };
     img.src = e.target.result;
   };
