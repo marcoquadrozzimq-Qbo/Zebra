@@ -6,10 +6,10 @@
 <style>
   body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
   h2 { color: #333; }
-  input, button { margin: 10px 5px; padding: 8px; font-size: 15px; }
-  #preview { margin-top: 20px; max-width: 300px; }
-  #result { width: 100%; height: 200px; }
-  .row { display: flex; align-items: center; gap: 10px; }
+  input, button, select { margin: 10px 5px; padding: 8px; font-size: 15px; }
+  #preview { margin-top: 20px; max-width: 600px; border:1px solid #ccc; }
+  #result { width: 100%; height: 200px; margin-top: 10px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -19,6 +19,7 @@
     <input type="file" id="imageInput" accept="image/*">
     <input type="number" id="width" placeholder="Larghezza px" style="width:120px;">
     <input type="number" id="height" placeholder="Altezza px" style="width:120px;">
+    <select id="copiesSelect"></select>
     <button id="convertBtn">Converti</button>
     <button id="downloadBtn" disabled>Scarica ZPL</button>
   </div>
@@ -27,68 +28,123 @@
   <img id="preview" alt="Anteprima immagine">
   <textarea id="result" readonly placeholder="Il codice ZPL apparirà qui..."></textarea>
 
-  <script>
-  const imgInput = document.getElementById('imageInput');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const result = document.getElementById('result');
-  const preview = document.getElementById('preview');
-  const convertBtn = document.getElementById('convertBtn');
-  const downloadBtn = document.getElementById('downloadBtn');
+<script>
+const imgInput = document.getElementById('imageInput');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const result = document.getElementById('result');
+const preview = document.getElementById('preview');
+const convertBtn = document.getElementById('convertBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const copiesSelect = document.getElementById('copiesSelect');
 
-  let zplCode = "";
+// Dimensioni etichetta in px (puoi adattare)
+const labelWidth = 600;
+const labelHeight = 400;
+const margin = 5; // margine
+const spacing = 5; // spaziatura tra immagini
 
-  convertBtn.addEventListener('click', async () => {
-    const file = imgInput.files[0];
-    if (!file) return alert("Seleziona un'immagine prima.");
-    const width = parseInt(document.getElementById('width').value) || 300;
-    const height = parseInt(document.getElementById('height').value) || 300;
+let zplCode = "";
 
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    await img.decode();
+convertBtn.addEventListener('click', async () => {
+  const file = imgInput.files[0];
+  if (!file) return alert("Seleziona un'immagine prima.");
+  const width = parseInt(document.getElementById('width').value) || 100;
+  const height = parseInt(document.getElementById('height').value) || 100;
 
-    canvas.width = width;
-    canvas.height = height;
-    ctx.drawImage(img, 0, 0, width, height);
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+  await img.decode();
 
-    const imageData = ctx.getImageData(0, 0, width, height).data;
+  // Calcolo righe e colonne possibili
+  const maxCols = Math.floor((labelWidth - 2*margin + spacing) / (width + spacing));
+  const maxRows = Math.floor((labelHeight - 2*margin + spacing) / (height + spacing));
+  const totalImages = maxCols * maxRows;
 
-    let hexLine = "";
-    let zplData = "";
+  // Popola menu a tendina
+  copiesSelect.innerHTML = '';
+  for (let i = 1; i <= totalImages; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.text = i;
+    copiesSelect.appendChild(opt);
+  }
 
-    for (let y = 0; y < height; y++) {
-      let line = "";
-      for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-        const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
-        line += avg > 127 ? "0" : "1";
-      }
-      let hex = "";
-      for (let i = 0; i < line.length; i += 8) {
-        hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, '0');
-      }
-      zplData += hex.toUpperCase() + "\n";
+  const copies = parseInt(copiesSelect.value) || totalImages;
+
+  // Canvas per anteprima
+  canvas.width = labelWidth;
+  canvas.height = labelHeight;
+  ctx.clearRect(0, 0, labelWidth, labelHeight);
+
+  // Disegna immagini sull'anteprima
+  let drawn = 0;
+  for (let r = 0; r < maxRows; r++) {
+    for (let c = 0; c < maxCols; c++) {
+      if (drawn >= copies) break;
+      const x = margin + c * (width + spacing);
+      const y = margin + r * (height + spacing);
+      ctx.drawImage(img, x, y, width, height);
+      drawn++;
     }
+  }
 
-    const bytesPerRow = Math.ceil(width / 8);
-    const totalBytes = bytesPerRow * height;
+  // Generazione ZPL
+  let zplData = '';
+  const drawCanvas = document.createElement('canvas');
+  drawCanvas.width = width;
+  drawCanvas.height = height;
+  const drawCtx = drawCanvas.getContext('2d');
+  drawCtx.drawImage(img, 0, 0, width, height);
+  const imageData = drawCtx.getImageData(0,0,width,height).data;
 
-    // Costruzione del file ZPL completo
-    zplCode = `~DGIMAGE.GRF,${totalBytes},${bytesPerRow},\n${zplData}\n^XA\n^FO50,50\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+  function convertImageToHex(data, w, h){
+    let hex = '';
+    for (let y = 0; y < h; y++) {
+      let line = '';
+      for (let x = 0; x < w; x++) {
+        const i = (y*w + x)*4;
+        const avg = (data[i]+data[i+1]+data[i+2])/3;
+        line += avg > 127 ? '0':'1';
+      }
+      for(let i=0;i<line.length;i+=8){
+        hex += parseInt(line.substr(i,8),2).toString(16).padStart(2,'0');
+      }
+      hex += '\n';
+    }
+    return hex.toUpperCase();
+  }
 
-    result.value = zplCode;
-    preview.src = canvas.toDataURL();
-    downloadBtn.disabled = false;
-  });
+  const bytesPerRow = Math.ceil(width / 8);
+  const totalBytes = bytesPerRow * height;
+  const imageHex = convertImageToHex(imageData, width, height);
 
-  downloadBtn.addEventListener('click', () => {
-    const blob = new Blob([zplCode], { type: "text/plain" });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = "immagine_zebra.zpl";
-    a.click();
-  });
-  </script>
+  // ZPL per tutte le immagini
+  zplCode = `~DGIMAGE.GRF,${totalBytes},${bytesPerRow},\n${imageHex}\n^XA\n`;
+  drawn = 0;
+  for (let r = 0; r < maxRows; r++) {
+    for (let c = 0; c < maxCols; c++) {
+      if (drawn >= copies) break;
+      const x = margin + c * (width + spacing);
+      const y = margin + r * (height + spacing);
+      zplCode += `^FO${x},${y}^XGIMAGE.GRF,1,1^FS\n`;
+      drawn++;
+    }
+  }
+  zplCode += '^XZ';
+
+  result.value = zplCode;
+  preview.src = canvas.toDataURL();
+  downloadBtn.disabled = false;
+});
+
+downloadBtn.addEventListener('click', () => {
+  const blob = new Blob([zplCode], { type: "text/plain" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "immagine_zebra.zpl";
+  a.click();
+});
+</script>
 </body>
 </html>
