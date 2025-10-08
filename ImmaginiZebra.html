@@ -1,49 +1,75 @@
-
 <!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8">
 <title>Convertitore Immagini Zebra ZPL</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
-  h2 { color: #333; }
-  input, button, select { margin: 10px 5px; padding: 8px; font-size: 15px; }
-  #preview { margin-top: 20px; max-width: 600px; border:1px solid #ccc; }
-  #result { width: 100%; height: 200px; margin-top: 10px; }
-  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  body { 
+    font-family: Arial, sans-serif; 
+    margin: 20px; 
+    background: #f4f4f4; 
+    font-size: 18px; /* font più grande */
+  }
+  h2 { color: #333; font-size: 24px; text-align:center; }
+  input, button, select { 
+    margin: 5px 0; 
+    padding: 10px; 
+    font-size: 18px; 
+    width: 100%;
+    box-sizing: border-box;
+  }
+  #preview { 
+    margin-top: 20px; 
+    width: 100%; 
+    max-width: 600px; 
+    border:1px solid #ccc; 
+    display:block; 
+    margin-left:auto; 
+    margin-right:auto;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .row > * { flex: 1; min-width: 100px; }
+  .center { text-align:center; }
 </style>
 </head>
 <body>
-  <h2>🖼️ Convertitore Immagini → ZPL (ZT420)</h2>
+  <h2>🖼️ Convertitore Immagini → ZPL</h2>
 
+  <!-- Selezione immagine -->
   <div class="row">
     <input type="file" id="imageInput" accept="image/*">
-    <input type="number" id="width" placeholder="Larghezza px" style="width:120px;">
-    <input type="number" id="height" placeholder="Altezza px" style="width:120px;">
+  </div>
+
+  <!-- Larghezza, Altezza e Menu -->
+  <div class="row">
+    <input type="number" id="width" placeholder="Larghezza (mm)">
+    <input type="number" id="height" placeholder="Altezza (mm)">
     <select id="copiesSelect"></select>
+  </div>
+
+  <!-- Pulsanti Converti e Scarica -->
+  <div class="row center">
     <button id="convertBtn">Converti</button>
     <button id="downloadBtn" disabled>Scarica ZPL</button>
   </div>
 
-  <canvas id="canvas" style="display:none;"></canvas>
+  <!-- Anteprima -->
   <img id="preview" alt="Anteprima immagine">
-  <textarea id="result" readonly placeholder="Il codice ZPL apparirà qui..."></textarea>
 
 <script>
 const imgInput = document.getElementById('imageInput');
-const canvas = document.getElementById('canvas');
+const canvas = document.createElement('canvas');
 const ctx = canvas.getContext('2d');
-const result = document.getElementById('result');
 const preview = document.getElementById('preview');
 const convertBtn = document.getElementById('convertBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const copiesSelect = document.getElementById('copiesSelect');
 
-// Dimensioni etichetta in px (puoi adattare)
+// Dimensioni etichetta in px
 const labelWidth = 600;
 const labelHeight = 400;
-const margin = 5; // margine
-const spacing = 5; // spaziatura tra immagini
+const margin = 5; 
+const spacing = 5; 
 
 let zplCode = "";
 
@@ -90,15 +116,9 @@ convertBtn.addEventListener('click', async () => {
     }
   }
 
-  // Generazione ZPL
-  let zplData = '';
-  const drawCanvas = document.createElement('canvas');
-  drawCanvas.width = width;
-  drawCanvas.height = height;
-  const drawCtx = drawCanvas.getContext('2d');
-  drawCtx.drawImage(img, 0, 0, width, height);
-  const imageData = drawCtx.getImageData(0,0,width,height).data;
+  preview.src = canvas.toDataURL();
 
+  // Preparazione ZPL
   function convertImageToHex(data, w, h){
     let hex = '';
     for (let y = 0; y < h; y++) {
@@ -116,11 +136,17 @@ convertBtn.addEventListener('click', async () => {
     return hex.toUpperCase();
   }
 
+  const drawCanvas = document.createElement('canvas');
+  drawCanvas.width = width;
+  drawCanvas.height = height;
+  const drawCtx = drawCanvas.getContext('2d');
+  drawCtx.drawImage(img, 0, 0, width, height);
+  const imageData = drawCtx.getImageData(0,0,width,height).data;
+
   const bytesPerRow = Math.ceil(width / 8);
   const totalBytes = bytesPerRow * height;
   const imageHex = convertImageToHex(imageData, width, height);
 
-  // ZPL per tutte le immagini
   zplCode = `~DGIMAGE.GRF,${totalBytes},${bytesPerRow},\n${imageHex}\n^XA\n`;
   drawn = 0;
   for (let r = 0; r < maxRows; r++) {
@@ -134,8 +160,6 @@ convertBtn.addEventListener('click', async () => {
   }
   zplCode += '^XZ';
 
-  result.value = zplCode;
-  preview.src = canvas.toDataURL();
   downloadBtn.disabled = false;
 });
 
