@@ -25,9 +25,9 @@
     border-radius: 6px;
   }
 
-  #imageInput { width: 80%; max-width: 350px; } /* raddoppiato */
-  #width, #height, #imageCount { width: 45%; max-width: 100px; } /* dimezzati */
-  #convertBtn, #downloadBtn { width: 35%; max-width: 120px; } /* dimezzati */
+  #imageInput { width: 80%; max-width: 350px; } 
+  #width, #height, #imageCount { width: 45%; max-width: 100px; } 
+  #convertBtn, #downloadBtn { width: 35%; max-width: 120px; } 
 
   button {
     background: #007bff;
@@ -52,12 +52,10 @@
 
   <h2>🖼️ Convertitore Immagini → ZPL (ZT420)</h2>
 
-  <!-- Scelta file -->
   <div>
     <input type="file" id="imageInput" accept="image/*">
   </div>
 
-  <!-- Larghezza, altezza, numero immagini -->
   <div>
     <input type="number" id="width" placeholder="Larghezza (mm)">
     <input type="number" id="height" placeholder="Altezza (mm)">
@@ -71,114 +69,124 @@
     </select>
   </div>
 
-  <!-- Pulsanti -->
   <div>
     <button id="convertBtn">Converti</button>
     <button id="downloadBtn" disabled>Scarica ZPL</button>
   </div>
 
-  <!-- Anteprima -->
   <canvas id="canvas" style="display:none;"></canvas>
   <img id="preview" alt="Anteprima etichetta">
 
-  <script>
-  const imgInput = document.getElementById('imageInput');
-  const canvas = document.getElementById('canvas');
-  const ctx = canvas.getContext('2d');
-  const preview = document.getElementById('preview');
-  const convertBtn = document.getElementById('convertBtn');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const imageCountSelect = document.getElementById('imageCount');
+<script>
+const imgInput = document.getElementById('imageInput');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const preview = document.getElementById('preview');
+const convertBtn = document.getElementById('convertBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const imageCountSelect = document.getElementById('imageCount');
 
-  let zplCode = "";
+let zplCode = "";
 
-  // Dimensioni etichetta fissa (in mm)
-  const LABEL_WIDTH_MM = 147.9;
-  const LABEL_HEIGHT_MM = 209.0;
-  const MARGIN_MM = 5;
-  const DPI = 300 / 25.4; // conversione mm → pixel (300 DPI)
+// Dimensioni etichetta fissa in mm
+const LABEL_WIDTH_MM = 147.9;
+const LABEL_HEIGHT_MM = 209.0;
+const MARGIN_MM = 5;
+const DPI = 300 / 25.4; // conversione mm → pixel
 
-  convertBtn.addEventListener('click', async () => {
-    const file = imgInput.files[0];
-    if (!file) return alert("Seleziona un'immagine prima.");
-    
-    const widthMM = parseFloat(document.getElementById('width').value) || 50;
-    const heightMM = parseFloat(document.getElementById('height').value) || 50;
-    const imageCount = parseInt(imageCountSelect.value);
+convertBtn.addEventListener('click', async () => {
+  const file = imgInput.files[0];
+  if (!file) return alert("Seleziona un'immagine prima.");
 
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    await img.decode();
+  const widthMM = parseFloat(document.getElementById('width').value) || 50;
+  const heightMM = parseFloat(document.getElementById('height').value) || 50;
+  const imageCount = parseInt(imageCountSelect.value);
 
-    // Calcola dimensioni etichetta in pixel
-    const labelWidthPx = LABEL_WIDTH_MM * DPI;
-    const labelHeightPx = LABEL_HEIGHT_MM * DPI;
-    const marginPx = MARGIN_MM * DPI;
-    const areaWidthPx = labelWidthPx - marginPx * 2;
-    const areaHeightPx = labelHeightPx - marginPx * 2;
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+  await img.decode();
 
-    // Calcola dimensioni immagine in pixel
-    const imgWidthPx = widthMM * DPI;
-    const imgHeightPx = heightMM * DPI;
+  // Calcola dimensioni etichetta in pixel
+  const labelWidthPx = LABEL_WIDTH_MM * DPI;
+  const labelHeightPx = LABEL_HEIGHT_MM * DPI;
+  const marginPx = MARGIN_MM * DPI;
+  const areaWidthPx = labelWidthPx - marginPx * 2;
+  const areaHeightPx = labelHeightPx - marginPx * 2;
 
-    // Reset canvas
-    canvas.width = labelWidthPx;
-    canvas.height = labelHeightPx;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, labelWidthPx, labelHeightPx);
+  // Calcola dimensioni immagine in pixel
+  const imgWidthPx = widthMM * DPI;
+  const imgHeightPx = heightMM * DPI;
 
-    // Calcola disposizione immagini
-    const cols = Math.ceil(Math.sqrt(imageCount));
-    const rows = Math.ceil(imageCount / cols);
+  // Calcolo numero massimo di colonne e righe
+  const maxCols = Math.floor(areaWidthPx / imgWidthPx);
+  const maxRows = Math.floor(areaHeightPx / imgHeightPx);
+  const maxImages = maxCols * maxRows;
+
+  // Controllo dimensioni e numero immagini
+  if (imgWidthPx > areaWidthPx || imgHeightPx > areaHeightPx || imageCount > maxImages) {
+    alert("⚠ Immagine troppo grande o numero di immagini superiore allo spazio disponibile!");
+    return;
+  }
+
+  // Reset canvas
+  canvas.width = labelWidthPx;
+  canvas.height = labelHeightPx;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, labelWidthPx, labelHeightPx);
+
+  // Calcola disposizione immagini
+  const cols = Math.ceil(Math.sqrt(imageCount));
+  const rows = Math.ceil(imageCount / cols);
+
+  for (let i = 0; i < imageCount; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+
     const cellWidth = areaWidthPx / cols;
     const cellHeight = areaHeightPx / rows;
 
-    for (let i = 0; i < imageCount; i++) {
-      const row = Math.floor(i / cols);
-      const col = i % cols;
+    const x = marginPx + col * cellWidth + (cellWidth - imgWidthPx) / 2;
+    const y = marginPx + row * cellHeight + (cellHeight - imgHeightPx) / 2;
 
-      const x = marginPx + col * cellWidth + (cellWidth - imgWidthPx) / 2;
-      const y = marginPx + row * cellHeight + (cellHeight - imgHeightPx) / 2;
+    ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
+  }
 
-      ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
+  // Aggiorna anteprima
+  preview.src = canvas.toDataURL("image/png");
+  downloadBtn.disabled = false;
+
+  // Conversione in ZPL
+  const imageData = ctx.getImageData(0, 0, labelWidthPx, labelHeightPx).data;
+  let zplData = "";
+  const widthBytes = Math.ceil(labelWidthPx / 8);
+  const totalBytes = widthBytes * labelHeightPx;
+
+  for (let y = 0; y < labelHeightPx; y++) {
+    let line = "";
+    for (let x = 0; x < labelWidthPx; x++) {
+      const i = (y * labelWidthPx + x) * 4;
+      const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
+      line += avg > 127 ? "0" : "1";
     }
-
-    // Aggiorna anteprima
-    preview.src = canvas.toDataURL("image/png");
-    downloadBtn.disabled = false;
-
-    // Conversione in ZPL
-    const imageData = ctx.getImageData(0, 0, labelWidthPx, labelHeightPx).data;
-    let zplData = "";
-    const widthBytes = Math.ceil(labelWidthPx / 8);
-    const totalBytes = widthBytes * labelHeightPx;
-
-    for (let y = 0; y < labelHeightPx; y++) {
-      let line = "";
-      for (let x = 0; x < labelWidthPx; x++) {
-        const i = (y * labelWidthPx + x) * 4;
-        const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
-        line += avg > 127 ? "0" : "1";
-      }
-      let hex = "";
-      for (let i = 0; i < line.length; i += 8) {
-        hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, '0');
-      }
-      zplData += hex.toUpperCase() + "\n";
+    let hex = "";
+    for (let i = 0; i < line.length; i += 8) {
+      hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, '0');
     }
+    zplData += hex.toUpperCase() + "\n";
+  }
 
-    zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO0,0\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
-  });
+  zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO0,0\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+});
 
-  // Download ZPL
-  downloadBtn.addEventListener('click', () => {
-    const blob = new Blob([zplCode], { type: "text/plain" });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = "immagine_zebra.zpl";
-    a.click();
-  });
-  </script>
+// Download ZPL
+downloadBtn.addEventListener('click', () => {
+  const blob = new Blob([zplCode], { type: "text/plain" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "immagine_zebra.zpl";
+  a.click();
+});
+</script>
 
 </body>
 </html>
