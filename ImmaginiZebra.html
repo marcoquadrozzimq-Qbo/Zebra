@@ -12,10 +12,7 @@
     font-size: 17px;
   }
 
-  h2 {
-    color: #333;
-    margin-bottom: 15px;
-  }
+  h2 { color: #333; margin-bottom: 15px; }
 
   input, select, button {
     font-size: 16px;
@@ -25,19 +22,12 @@
     border-radius: 6px;
   }
 
-  #imageInput { width: 80%; max-width: 350px; } 
-  #width, #height, #imageCount { width: 45%; max-width: 100px; } 
-  #convertBtn, #downloadBtn { width: 35%; max-width: 120px; } 
+  #imageInput { width: 80%; max-width: 350px; }
+  #width, #height, #imageCount, #imagePosition { width: 45%; max-width: 100px; }
+  #convertBtn, #downloadBtn { width: 35%; max-width: 120px; }
 
-  button {
-    background: #007bff;
-    color: white;
-    cursor: pointer;
-  }
-
-  button:disabled {
-    background: #aaa;
-  }
+  button { background: #007bff; color: white; cursor: pointer; }
+  button:disabled { background: #aaa; }
 
   #preview {
     display: block;
@@ -50,32 +40,36 @@
 </head>
 <body>
 
-  <h2>🖼️ Convertitore Immagini → ZPL (ZT420)</h2>
+<h2>🖼️ Convertitore Immagini → ZPL (ZT420)</h2>
 
-  <div>
-    <input type="file" id="imageInput" accept="image/*">
-  </div>
+<div>
+  <input type="file" id="imageInput" accept="image/*">
+</div>
 
-  <div>
-    <input type="number" id="width" placeholder="Larghezza (mm)">
-    <input type="number" id="height" placeholder="Altezza (mm)">
-    <select id="imageCount">
-      <option value="1">1 immagine</option>
-      <option value="2">2 immagini</option>
-      <option value="3">3 immagini</option>
-      <option value="4">4 immagini</option>
-      <option value="6">6 immagini</option>
-      <option value="8">8 immagini</option>
-    </select>
-  </div>
+<div>
+  <input type="number" id="width" placeholder="Larghezza (mm)">
+  <input type="number" id="height" placeholder="Altezza (mm)">
+  <select id="imageCount">
+    <option value="1">1 immagine</option>
+    <option value="2">2 immagini</option>
+    <option value="3">3 immagini</option>
+    <option value="4">4 immagini</option>
+    <option value="6">6 immagini</option>
+    <option value="8">8 immagini</option>
+  </select>
+  <select id="imagePosition">
+    <option value="center">Centro</option>
+    <option value="top-left">Alto sinistra</option>
+  </select>
+</div>
 
-  <div>
-    <button id="convertBtn">Converti</button>
-    <button id="downloadBtn" disabled>Scarica ZPL</button>
-  </div>
+<div>
+  <button id="convertBtn">Converti</button>
+  <button id="downloadBtn" disabled>Scarica ZPL</button>
+</div>
 
-  <canvas id="canvas" style="display:none;"></canvas>
-  <img id="preview" alt="Anteprima etichetta">
+<canvas id="canvas" style="display:none;"></canvas>
+<img id="preview" alt="Anteprima etichetta">
 
 <script>
 const imgInput = document.getElementById('imageInput');
@@ -85,14 +79,15 @@ const preview = document.getElementById('preview');
 const convertBtn = document.getElementById('convertBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const imageCountSelect = document.getElementById('imageCount');
+const imagePositionSelect = document.getElementById('imagePosition');
 
 let zplCode = "";
 
-// Dimensioni etichetta fissa in mm
+// Dimensioni etichetta in mm
 const LABEL_WIDTH_MM = 147.9;
 const LABEL_HEIGHT_MM = 209.0;
 const MARGIN_MM = 5;
-const DPI = 300 / 25.4; // conversione mm → pixel
+const DPI = 300 / 25.4; // mm → pixel
 
 convertBtn.addEventListener('click', async () => {
   const file = imgInput.files[0];
@@ -101,30 +96,32 @@ convertBtn.addEventListener('click', async () => {
   const widthMM = parseFloat(document.getElementById('width').value) || 50;
   const heightMM = parseFloat(document.getElementById('height').value) || 50;
   const imageCount = parseInt(imageCountSelect.value);
+  const position = imagePositionSelect.value;
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
   await img.decode();
 
-  // Calcola dimensioni etichetta in pixel
   const labelWidthPx = LABEL_WIDTH_MM * DPI;
   const labelHeightPx = LABEL_HEIGHT_MM * DPI;
   const marginPx = MARGIN_MM * DPI;
   const areaWidthPx = labelWidthPx - marginPx * 2;
   const areaHeightPx = labelHeightPx - marginPx * 2;
-
-  // Calcola dimensioni immagine in pixel
   const imgWidthPx = widthMM * DPI;
   const imgHeightPx = heightMM * DPI;
 
-  // Calcolo numero massimo di colonne e righe
+  // Check: dimensione immagine singola
+  if (imgWidthPx > areaWidthPx || imgHeightPx > areaHeightPx) {
+    alert("⚠ L'immagine è troppo grande per l'area stampabile!");
+    return;
+  }
+
+  // Check: numero massimo di immagini in area
   const maxCols = Math.floor(areaWidthPx / imgWidthPx);
   const maxRows = Math.floor(areaHeightPx / imgHeightPx);
   const maxImages = maxCols * maxRows;
-
-  // Controllo dimensioni e numero immagini
-  if (imgWidthPx > areaWidthPx || imgHeightPx > areaHeightPx || imageCount > maxImages) {
-    alert("⚠ Immagine troppo grande o numero di immagini superiore allo spazio disponibile!");
+  if (imageCount > maxImages) {
+    alert("⚠ Numero di immagini troppo grande per l'etichetta!");
     return;
   }
 
@@ -134,20 +131,30 @@ convertBtn.addEventListener('click', async () => {
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, labelWidthPx, labelHeightPx);
 
-  // Calcola disposizione immagini
-  const cols = Math.ceil(Math.sqrt(imageCount));
-  const rows = Math.ceil(imageCount / cols);
+  let startX = marginPx;
+  let startY = marginPx;
+  let spacingPx = 5 * DPI; // 0,5 cm tra immagini
 
   for (let i = 0; i < imageCount; i++) {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-
-    const cellWidth = areaWidthPx / cols;
-    const cellHeight = areaHeightPx / rows;
-
-    const x = marginPx + col * cellWidth + (cellWidth - imgWidthPx) / 2;
-    const y = marginPx + row * cellHeight + (cellHeight - imgHeightPx) / 2;
-
+    let x, y;
+    if (position === "center") {
+      const cols = Math.ceil(Math.sqrt(imageCount));
+      const rows = Math.ceil(imageCount / cols);
+      const cellWidth = areaWidthPx / cols;
+      const cellHeight = areaHeightPx / rows;
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      x = marginPx + col * cellWidth + (cellWidth - imgWidthPx)/2;
+      y = marginPx + row * cellHeight + (cellHeight - imgHeightPx)/2;
+    } else { // top-left
+      x = startX;
+      y = startY;
+      startX += imgWidthPx + spacingPx;
+      if (startX + imgWidthPx > marginPx + areaWidthPx) { // passa a riga successiva
+        startX = marginPx;
+        startY += imgHeightPx + spacingPx;
+      }
+    }
     ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
   }
 
@@ -155,7 +162,7 @@ convertBtn.addEventListener('click', async () => {
   preview.src = canvas.toDataURL("image/png");
   downloadBtn.disabled = false;
 
-  // Conversione in ZPL
+  // Conversione ZPL
   const imageData = ctx.getImageData(0, 0, labelWidthPx, labelHeightPx).data;
   let zplData = "";
   const widthBytes = Math.ceil(labelWidthPx / 8);
@@ -178,7 +185,6 @@ convertBtn.addEventListener('click', async () => {
   zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO0,0\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 });
 
-// Download ZPL
 downloadBtn.addEventListener('click', () => {
   const blob = new Blob([zplCode], { type: "text/plain" });
   const a = document.createElement('a');
