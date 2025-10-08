@@ -2,174 +2,145 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>Convertitore Immagini Zebra ZPL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generatore Etichette Zebra</title>
 <style>
-  body { 
-    font-family: Arial, sans-serif; 
-    margin: 20px; 
-    background: #f4f4f4; 
-    font-size: 18px; /* font più grande */
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 18px;
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
-  h2 { color: #333; font-size: 24px; text-align:center; }
-  input, button, select { 
-    margin: 5px 0; 
-    padding: 10px; 
-    font-size: 18px; 
+  h2 {
+    margin-bottom: 10px;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
     width: 100%;
-    box-sizing: border-box;
+    max-width: 400px;
   }
-  #preview { 
-    margin-top: 20px; 
-    width: 100%; 
-    max-width: 600px; 
-    border:1px solid #ccc; 
-    display:block; 
-    margin-left:auto; 
-    margin-right:auto;
+  input, select, button {
+    font-size: 18px;
+    padding: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
   }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; }
-  .row > * { flex: 1; min-width: 100px; }
-  .center { text-align:center; }
+  input[type="number"], select {
+    width: 45%;
+  }
+  #imageInput {
+    width: 90%;
+  }
+  button {
+    width: 45%;
+    background-color: #007bff;
+    color: white;
+    border: none;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  #preview {
+    margin-top: 15px;
+    border: 1px solid #ccc;
+    padding: 8px;
+    width: 90%;
+    max-width: 400px;
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+  }
 </style>
 </head>
 <body>
-  <h2>🖼️ Convertitore Immagini → ZPL</h2>
+  <h2>Generatore Etichette Zebra</h2>
+  <div class="controls">
+    <input type="file" id="imageInput" accept="image/*"><br>
 
-  <!-- Selezione immagine -->
-  <div class="row">
-    <input type="file" id="imageInput" accept="image/*">
+    <div>
+      <input type="number" id="width" placeholder="Larghezza (mm)">
+      <input type="number" id="height" placeholder="Altezza (mm)">
+    </div>
+
+    <div>
+      <label for="numImages">Numero immagini:</label>
+      <select id="numImages">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="6">6</option>
+      </select>
+    </div>
+
+    <div>
+      <button id="convertBtn">Converti</button>
+      <button id="downloadBtn">Scarica ZPL</button>
+    </div>
   </div>
 
-  <!-- Larghezza, Altezza e Menu -->
-  <div class="row">
-    <input type="number" id="width" placeholder="Larghezza (mm)">
-    <input type="number" id="height" placeholder="Altezza (mm)">
-    <select id="copiesSelect"></select>
+  <div id="preview">
+    <h3>Anteprima Etichetta</h3>
+    <canvas id="canvas"></canvas>
   </div>
 
-  <!-- Pulsanti Converti e Scarica -->
-  <div class="row center">
-    <button id="convertBtn">Converti</button>
-    <button id="downloadBtn" disabled>Scarica ZPL</button>
-  </div>
+  <script>
+    const imageInput = document.getElementById("imageInput");
+    const widthInput = document.getElementById("width");
+    const heightInput = document.getElementById("height");
+    const numImagesSelect = document.getElementById("numImages");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
 
-  <!-- Anteprima -->
-  <img id="preview" alt="Anteprima immagine">
+    let image = new Image();
 
-<script>
-const imgInput = document.getElementById('imageInput');
-const canvas = document.createElement('canvas');
-const ctx = canvas.getContext('2d');
-const preview = document.getElementById('preview');
-const convertBtn = document.getElementById('convertBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const copiesSelect = document.getElementById('copiesSelect');
+    imageInput.addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        image.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
 
-// Dimensioni etichetta in px
-const labelWidth = 600;
-const labelHeight = 400;
-const margin = 5; 
-const spacing = 5; 
+    document.getElementById("convertBtn").addEventListener("click", () => {
+      if (!image.src) return alert("Seleziona un'immagine prima.");
+      const numImages = parseInt(numImagesSelect.value);
+      const widthMM = parseFloat(widthInput.value) || 50;
+      const heightMM = parseFloat(heightInput.value) || 30;
 
-let zplCode = "";
+      const mmToPx = 8;
+      const imgW = widthMM * mmToPx;
+      const imgH = heightMM * mmToPx;
 
-convertBtn.addEventListener('click', async () => {
-  const file = imgInput.files[0];
-  if (!file) return alert("Seleziona un'immagine prima.");
-  const width = parseInt(document.getElementById('width').value) || 100;
-  const height = parseInt(document.getElementById('height').value) || 100;
+      const cols = Math.ceil(Math.sqrt(numImages));
+      const rows = Math.ceil(numImages / cols);
 
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
-  await img.decode();
+      canvas.width = imgW * cols + (cols - 1) * 4;
+      canvas.height = imgH * rows + (rows - 1) * 4;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Calcolo righe e colonne possibili
-  const maxCols = Math.floor((labelWidth - 2*margin + spacing) / (width + spacing));
-  const maxRows = Math.floor((labelHeight - 2*margin + spacing) / (height + spacing));
-  const totalImages = maxCols * maxRows;
-
-  // Popola menu a tendina
-  copiesSelect.innerHTML = '';
-  for (let i = 1; i <= totalImages; i++) {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.text = i;
-    copiesSelect.appendChild(opt);
-  }
-
-  const copies = parseInt(copiesSelect.value) || totalImages;
-
-  // Canvas per anteprima
-  canvas.width = labelWidth;
-  canvas.height = labelHeight;
-  ctx.clearRect(0, 0, labelWidth, labelHeight);
-
-  // Disegna immagini sull'anteprima
-  let drawn = 0;
-  for (let r = 0; r < maxRows; r++) {
-    for (let c = 0; c < maxCols; c++) {
-      if (drawn >= copies) break;
-      const x = margin + c * (width + spacing);
-      const y = margin + r * (height + spacing);
-      ctx.drawImage(img, x, y, width, height);
-      drawn++;
-    }
-  }
-
-  preview.src = canvas.toDataURL();
-
-  // Preparazione ZPL
-  function convertImageToHex(data, w, h){
-    let hex = '';
-    for (let y = 0; y < h; y++) {
-      let line = '';
-      for (let x = 0; x < w; x++) {
-        const i = (y*w + x)*4;
-        const avg = (data[i]+data[i+1]+data[i+2])/3;
-        line += avg > 127 ? '0':'1';
+      for (let i = 0; i < numImages; i++) {
+        const x = (i % cols) * (imgW + 4);
+        const y = Math.floor(i / cols) * (imgH + 4);
+        ctx.drawImage(image, x, y, imgW, imgH);
       }
-      for(let i=0;i<line.length;i+=8){
-        hex += parseInt(line.substr(i,8),2).toString(16).padStart(2,'0');
-      }
-      hex += '\n';
-    }
-    return hex.toUpperCase();
-  }
+    });
 
-  const drawCanvas = document.createElement('canvas');
-  drawCanvas.width = width;
-  drawCanvas.height = height;
-  const drawCtx = drawCanvas.getContext('2d');
-  drawCtx.drawImage(img, 0, 0, width, height);
-  const imageData = drawCtx.getImageData(0,0,width,height).data;
-
-  const bytesPerRow = Math.ceil(width / 8);
-  const totalBytes = bytesPerRow * height;
-  const imageHex = convertImageToHex(imageData, width, height);
-
-  zplCode = `~DGIMAGE.GRF,${totalBytes},${bytesPerRow},\n${imageHex}\n^XA\n`;
-  drawn = 0;
-  for (let r = 0; r < maxRows; r++) {
-    for (let c = 0; c < maxCols; c++) {
-      if (drawn >= copies) break;
-      const x = margin + c * (width + spacing);
-      const y = margin + r * (height + spacing);
-      zplCode += `^FO${x},${y}^XGIMAGE.GRF,1,1^FS\n`;
-      drawn++;
-    }
-  }
-  zplCode += '^XZ';
-
-  downloadBtn.disabled = false;
-});
-
-downloadBtn.addEventListener('click', () => {
-  const blob = new Blob([zplCode], { type: "text/plain" });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = "immagine_zebra.zpl";
-  a.click();
-});
-</script>
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = "etichetta_zebra.png";
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+  </script>
 </body>
 </html>
