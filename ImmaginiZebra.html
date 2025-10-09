@@ -83,11 +83,11 @@ const imagePositionSelect = document.getElementById('imagePosition');
 
 let zplCode = "";
 
-// Dimensioni etichetta in mm
+// Dimensioni etichetta e margini
 const LABEL_WIDTH_MM = 147.9;
 const LABEL_HEIGHT_MM = 209.0;
 const MARGIN_MM = 5;
-const DPI = 300 / 25.4; // mm → pixel
+const DPI = 300 / 25.4; // conversione mm -> pixel
 
 convertBtn.addEventListener('click', async () => {
   const file = imgInput.files[0];
@@ -110,13 +110,12 @@ convertBtn.addEventListener('click', async () => {
   const imgWidthPx = widthMM * DPI;
   const imgHeightPx = heightMM * DPI;
 
-  // Check: dimensione immagine singola
+  // Controlli validità dimensioni
   if (imgWidthPx > areaWidthPx || imgHeightPx > areaHeightPx) {
     alert("⚠ L'immagine è troppo grande per l'area stampabile!");
     return;
   }
 
-  // Check: numero massimo di immagini in area
   const maxCols = Math.floor(areaWidthPx / imgWidthPx);
   const maxRows = Math.floor(areaHeightPx / imgHeightPx);
   const maxImages = maxCols * maxRows;
@@ -125,7 +124,7 @@ convertBtn.addEventListener('click', async () => {
     return;
   }
 
-  // Reset canvas
+  // ANTEPRIMA COMPLETA
   canvas.width = labelWidthPx;
   canvas.height = labelHeightPx;
   ctx.fillStyle = "#fff";
@@ -133,7 +132,9 @@ convertBtn.addEventListener('click', async () => {
 
   let startX = marginPx;
   let startY = marginPx;
-  let spacingPx = 5 * DPI; // 0,5 cm tra immagini
+  let spacingPx = 5 * DPI; // 0,5 cm di distanza
+
+  let minX = labelWidthPx, minY = labelHeightPx, maxX = 0, maxY = 0;
 
   for (let i = 0; i < imageCount; i++) {
     let x, y;
@@ -150,29 +151,44 @@ convertBtn.addEventListener('click', async () => {
       x = startX;
       y = startY;
       startX += imgWidthPx + spacingPx;
-      if (startX + imgWidthPx > marginPx + areaWidthPx) { // passa a riga successiva
+      if (startX + imgWidthPx > marginPx + areaWidthPx) {
         startX = marginPx;
         startY += imgHeightPx + spacingPx;
       }
     }
     ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
+    // traccia area utile per ZPL
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + imgWidthPx);
+    maxY = Math.max(maxY, y + imgHeightPx);
   }
 
   // Aggiorna anteprima
   preview.src = canvas.toDataURL("image/png");
   downloadBtn.disabled = false;
 
-  // Conversione ZPL
-  const imageData = ctx.getImageData(0, 0, labelWidthPx, labelHeightPx).data;
-  let zplData = "";
-  const widthBytes = Math.ceil(labelWidthPx / 8);
-  const totalBytes = widthBytes * labelHeightPx;
+  // CREA RITAGLIO SOLO AREA UTILE
+  const usefulWidth = maxX - minX;
+  const usefulHeight = maxY - minY;
+  const imageData = ctx.getImageData(minX, minY, usefulWidth, usefulHeight);
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = usefulWidth;
+  tempCanvas.height = usefulHeight;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.putImageData(imageData, 0, 0);
+  const croppedData = tempCtx.getImageData(0, 0, usefulWidth, usefulHeight).data;
 
-  for (let y = 0; y < labelHeightPx; y++) {
+  // CONVERSIONE ZPL
+  let zplData = "";
+  const widthBytes = Math.ceil(usefulWidth / 8);
+  const totalBytes = widthBytes * usefulHeight;
+
+  for (let y = 0; y < usefulHeight; y++) {
     let line = "";
-    for (let x = 0; x < labelWidthPx; x++) {
-      const i = (y * labelWidthPx + x) * 4;
-      const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
+    for (let x = 0; x < usefulWidth; x++) {
+      const i = (y * usefulWidth + x) * 4;
+      const avg = (croppedData[i] + croppedData[i + 1] + croppedData[i + 2]) / 3;
       line += avg > 127 ? "0" : "1";
     }
     let hex = "";
@@ -182,7 +198,9 @@ convertBtn.addEventListener('click', async () => {
     zplData += hex.toUpperCase() + "\n";
   }
 
-  zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO0,0\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+  const offsetX = Math.round(minX);
+  const offsetY = Math.round(minY);
+  zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 });
 
 downloadBtn.addEventListener('click', () => {
