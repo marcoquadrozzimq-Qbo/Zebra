@@ -3,34 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generatore Etichette Zebra</title>
+  <title>Generatore Etichette Zebra (203dpi)</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
+    body { font-family: Arial, sans-serif; margin: 20px; font-size: 16px; }
     label { display: block; margin-top: 10px; }
-    canvas { border: 1px solid #ccc; margin-top: 10px; }
+    input, select, button { font-size: 16px; margin-top: 4px; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; background: white; display: block; }
+    textarea { width: 100%; margin-top: 10px; font-size: 14px; }
   </style>
 </head>
 <body>
-  <h2>Generatore ZPL per Stampante Zebra</h2>
+  <h2>Generatore ZPL per Zebra ZT420 (203 dpi)</h2>
 
   <label>Carica immagine:
     <input type="file" id="imageInput" accept="image/*">
   </label>
 
-  <label>Larghezza etichetta (mm):
-    <input type="number" id="labelWidth" value="100">
+  <label>Larghezza etichetta (cm):
+    <input type="number" id="labelWidth" value="14.79" step="0.01">
   </label>
 
-  <label>Altezza etichetta (mm):
-    <input type="number" id="labelHeight" value="50">
+  <label>Altezza etichetta (cm):
+    <input type="number" id="labelHeight" value="20.9" step="0.01">
   </label>
 
-  <label>Larghezza immagine (mm):
-    <input type="number" id="imgWidth" value="30">
+  <label>Larghezza immagine (cm):
+    <input type="number" id="imgWidth" value="3.0" step="0.1">
   </label>
 
-  <label>Altezza immagine (mm):
-    <input type="number" id="imgHeight" value="40">
+  <label>Altezza immagine (cm):
+    <input type="number" id="imgHeight" value="4.0" step="0.1">
   </label>
 
   <label>Numero immagini:
@@ -45,25 +47,24 @@
   </label>
 
   <button id="generate">Genera ZPL</button>
+  <button id="download" style="display:none;">Scarica file .zpl</button>
 
   <h3>Anteprima etichetta:</h3>
-  <canvas id="preview" width="800" height="400"></canvas>
-
-  <h3>ZPL generato:</h3>
-  <textarea id="zplOutput" rows="15" cols="80" readonly></textarea>
+  <canvas id="preview"></canvas>
 
   <script>
-    const mmToPx = mm => Math.round(mm * 8); // 203 dpi = 8 px/mm
-    const marginPx = mmToPx(0.5); // margine fisso 0,5 cm
+    // Conversione cm -> pixel per 203 dpi (8 px/mm)
+    const cmToPx = cm => Math.round(cm * 203 / 2.54);
+    const marginPx = cmToPx(0.5); // margine 0,5 cm per lato
 
     document.getElementById('generate').addEventListener('click', async () => {
       const imgInput = document.getElementById('imageInput').files[0];
       if (!imgInput) return alert('Carica prima un\'immagine.');
 
-      const labelWidthPx = mmToPx(+document.getElementById('labelWidth').value);
-      const labelHeightPx = mmToPx(+document.getElementById('labelHeight').value);
-      const imgWidthPx = mmToPx(+document.getElementById('imgWidth').value);
-      const imgHeightPx = mmToPx(+document.getElementById('imgHeight').value);
+      const labelWidthPx = cmToPx(+document.getElementById('labelWidth').value);
+      const labelHeightPx = cmToPx(+document.getElementById('labelHeight').value);
+      const imgWidthPx = cmToPx(+document.getElementById('imgWidth').value);
+      const imgHeightPx = cmToPx(+document.getElementById('imgHeight').value);
       const numImages = +document.getElementById('numImages').value;
       const position = document.getElementById('position').value;
 
@@ -71,6 +72,7 @@
       img.src = URL.createObjectURL(imgInput);
       await img.decode();
 
+      // Canvas anteprima
       const canvas = document.getElementById('preview');
       canvas.width = labelWidthPx;
       canvas.height = labelHeightPx;
@@ -104,7 +106,7 @@
         ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
       }
 
-      // conversione immagine in ZPL (inversione corretta)
+      // Conversione in ZPL
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
       let zplData = "";
       const widthBytes = Math.ceil(canvas.width / 8);
@@ -124,9 +126,21 @@
         zplData += hex.toUpperCase() + "\n";
       }
 
-      const zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+      const zplCode =
+        `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n` +
+        `^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-      document.getElementById('zplOutput').value = zplCode;
+      // Salvataggio e download
+      const blob = new Blob([zplCode], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const downloadBtn = document.getElementById('download');
+      downloadBtn.style.display = "inline-block";
+      downloadBtn.onclick = () => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "etichetta.zpl";
+        a.click();
+      };
     });
   </script>
 </body>
