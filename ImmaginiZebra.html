@@ -39,11 +39,19 @@
     <input type="number" id="numImages" value="1" min="1">
   </label>
 
-  <label>Posizione immagini:
-    <select id="position">
-      <option value="center">Centro (Default)</option>
-      <option value="top-left">Alto Sinistra</option>
+  <label>Orientamento etichetta:
+    <select id="orientation">
+      <option value="portrait">Verticale (Portrait)</option>
+      <option value="landscape">Orizzontale (Landscape)</option>
     </select>
+  </label>
+
+  <label>Offset X (mm):
+    <input type="number" id="offsetX" value="0" step="0.1">
+  </label>
+
+  <label>Offset Y (mm):
+    <input type="number" id="offsetY" value="0" step="0.1">
   </label>
 
   <button id="generate">Genera ZPL</button>
@@ -53,26 +61,33 @@
   <canvas id="preview"></canvas>
 
   <script>
-    // Conversione cm -> pixel per 203 dpi (8 px/mm)
+    // Conversione cm -> pixel per 203 dpi (1 cm ≈ 80 px)
     const cmToPx = cm => Math.round(cm * 203 / 2.54);
-    const marginPx = cmToPx(0.5); // margine 0,5 cm per lato
+    const mmToPx = mm => Math.round(mm * 203 / 25.4);
+    const marginPx = mmToPx(5); // margine 5 mm
 
     document.getElementById('generate').addEventListener('click', async () => {
       const imgInput = document.getElementById('imageInput').files[0];
       if (!imgInput) return alert('Carica prima un\'immagine.');
 
-      const labelWidthPx = cmToPx(+document.getElementById('labelWidth').value);
-      const labelHeightPx = cmToPx(+document.getElementById('labelHeight').value);
+      let labelWidthPx = cmToPx(+document.getElementById('labelWidth').value);
+      let labelHeightPx = cmToPx(+document.getElementById('labelHeight').value);
       const imgWidthPx = cmToPx(+document.getElementById('imgWidth').value);
       const imgHeightPx = cmToPx(+document.getElementById('imgHeight').value);
       const numImages = +document.getElementById('numImages').value;
-      const position = document.getElementById('position').value;
+      const orientation = document.getElementById('orientation').value;
+      const offsetX = mmToPx(+document.getElementById('offsetX').value);
+      const offsetY = mmToPx(+document.getElementById('offsetY').value);
+
+      // Se landscape, scambia larghezza e altezza
+      if (orientation === "landscape") {
+        [labelWidthPx, labelHeightPx] = [labelHeightPx, labelWidthPx];
+      }
 
       const img = new Image();
       img.src = URL.createObjectURL(imgInput);
       await img.decode();
 
-      // Canvas anteprima
       const canvas = document.getElementById('preview');
       canvas.width = labelWidthPx;
       canvas.height = labelHeightPx;
@@ -80,22 +95,14 @@
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const perRow = Math.floor((labelWidthPx + marginPx) / (imgWidthPx + marginPx));
+      // Calcolo posizione multi-immagini
+      const perRow = Math.floor((labelWidthPx - offsetX + marginPx) / (imgWidthPx + marginPx));
       const rows = Math.ceil(numImages / perRow);
       const totalHeight = rows * imgHeightPx + (rows - 1) * marginPx;
 
-      if (imgWidthPx > labelWidthPx || totalHeight > labelHeightPx) {
-        alert("⚠️ Le immagini non rientrano nei bordi dell'etichetta.");
+      if (imgWidthPx + offsetX > labelWidthPx || totalHeight + offsetY > labelHeightPx) {
+        alert("⚠️ Alcune immagini superano i limiti dell'etichetta. Controlla misure, offset o orientamento.");
         return;
-      }
-
-      let offsetX, offsetY;
-      if (position === "center") {
-        offsetX = Math.round((labelWidthPx - (perRow * imgWidthPx + (perRow - 1) * marginPx)) / 2);
-        offsetY = Math.round((labelHeightPx - totalHeight) / 2);
-      } else {
-        offsetX = marginPx;
-        offsetY = marginPx;
       }
 
       for (let i = 0; i < numImages; i++) {
@@ -117,7 +124,7 @@
         for (let x = 0; x < canvas.width; x++) {
           const i = (y * canvas.width + x) * 4;
           const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
-          line += avg > 127 ? "0" : "1"; // 0=bianco, 1=nero
+          line += avg > 127 ? "0" : "1";
         }
         let hex = "";
         for (let i = 0; i < line.length; i += 8) {
@@ -130,7 +137,6 @@
         `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n` +
         `^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-      // Salvataggio e download
       const blob = new Blob([zplCode], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
       const downloadBtn = document.getElementById('download');
@@ -145,4 +151,3 @@
   </script>
 </body>
 </html>
-
