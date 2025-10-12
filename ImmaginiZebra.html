@@ -1,567 +1,280 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Generatore Etichette Zebra (203dpi) - Testi Avanzati</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generatore Etichette Zebra (203dpi)</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 18px; font-size: 15px; color:#111; }
-    label { display:block; margin-top:8px; }
-    input, select, button { font-size:14px; margin-top:4px; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    canvas { border:1px solid #ccc; margin-top:12px; background:white; display:block; }
-    .group { border:1px solid #eee; padding:10px; margin-top:10px; border-radius:6px; }
-    .small { font-size:13px; color:#555; }
-    .col2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    .hidden { display:none; }
-    .inline-small { font-size:13px; margin-left:6px; }
-    .field-inline { display:flex; gap:8px; align-items:center; }
+    body { font-family: Arial, sans-serif; margin: 20px; font-size: 16px; }
+    label { display: block; margin-top: 10px; }
+    input, select, button { font-size: 16px; margin-top: 4px; }
+    canvas { border: 1px solid #ccc; margin-top: 10px; background: white; display: block; }
+    textarea { width: 100%; margin-top: 10px; font-size: 14px; }
   </style>
 </head>
 <body>
-  <h2>Generatore ZPL per Zebra ZT420 (203 dpi) — testi avanzati</h2>
+  <h2>Generatore ZPL per Zebra ZT420 (203 dpi)</h2>
 
-  <div class="group">
-    <label>Carica immagine:
-      <input type="file" id="imageInput" accept="image/*">
+  <label>Carica immagine:
+    <input type="file" id="imageInput" accept="image/*">
+  </label>
+
+  <label>Larghezza etichetta (cm):
+    <input type="number" id="labelWidth" value="14.79" step="0.01">
+  </label>
+
+  <label>Altezza etichetta (cm):
+    <input type="number" id="labelHeight" value="20.9" step="0.01">
+  </label>
+
+  <label>Larghezza immagine (cm):
+    <input type="number" id="imgWidth" value="3.0" step="0.1">
+  </label>
+
+  <label>Altezza immagine (cm):
+    <input type="number" id="imgHeight" value="4.0" step="0.1">
+  </label>
+
+  <label>Numero immagini:
+    <input type="number" id="numImages" value="1" min="1">
+  </label>
+
+  <label>Posizione immagini:
+    <select id="position">
+      <option value="center">Centro (Default)</option>
+      <option value="top-left">Alto Sinistra</option>
+    </select>
+  </label>
+
+  <label>
+    <input type="checkbox" id="enableTexts"> Abilita testi
+  </label>
+
+  <div id="textOptions" style="display:none; margin-top: 10px; border: 1px solid #ccc; padding: 10px; border-radius: 8px;">
+    <h4>Opzioni Testo</h4>
+    
+    <label>Testo sopra immagine:
+      <input type="text" id="textTop" placeholder="Testo sopra">
+    </label>
+    <label>Offset Y sopra (cm):
+      <input type="number" id="offsetTop" value="0.5" step="0.1">
     </label>
 
-    <div class="row">
-      <label>Larghezza etichetta (cm):
-        <input type="number" id="labelWidth" value="14.79" step="0.01">
-      </label>
+    <label>Testo sotto immagine:
+      <input type="text" id="textBottom" placeholder="Testo sotto">
+    </label>
+    <label>Offset Y sotto (cm):
+      <input type="number" id="offsetBottom" value="0.5" step="0.1">
+    </label>
 
-      <label>Altezza etichetta (cm):
-        <input type="number" id="labelHeight" value="20.9" step="0.01">
-      </label>
+    <label>Testo a sinistra (verticale):
+      <input type="text" id="textLeft" placeholder="Testo sinistro">
+    </label>
+    <label>Offset X sinistra (cm):
+      <input type="number" id="offsetLeft" value="0.5" step="0.1">
+    </label>
 
-      <label>Orientamento:
-        <select id="orientation">
-          <option value="portrait">Verticale (Portrait)</option>
-          <option value="landscape">Orizzontale (Landscape)</option>
-        </select>
-      </label>
-    </div>
+    <label>Testo a destra (verticale):
+      <input type="text" id="textRight" placeholder="Testo destro">
+    </label>
+    <label>Offset X destra (cm):
+      <input type="number" id="offsetRight" value="0.5" step="0.1">
+    </label>
 
-    <div class="row">
-      <label>Larghezza immagine (cm):
-        <input type="number" id="imgWidth" value="3.0" step="0.1">
-      </label>
-
-      <label>Altezza immagine (cm):
-        <input type="number" id="imgHeight" value="4.0" step="0.1">
-      </label>
-
-      <label>Numero immagini:
-        <input type="number" id="numImages" value="1" min="1">
-      </label>
-    </div>
-
-    <div class="row">
-      <label>Offset X globale (mm):
-        <input type="number" id="offsetX" value="0" step="0.1">
-      </label>
-
-      <label>Offset Y globale (mm):
-        <input type="number" id="offsetY" value="0" step="0.1">
-      </label>
-
-      <label>Margine tra immagini (mm):
-        <input type="number" id="gap" value="5" step="0.1">
-      </label>
-    </div>
+    <label>
+      <input type="checkbox" id="curveTop"> Testo curvato sopra
+    </label>
+    <label>
+      <input type="checkbox" id="curveBottom"> Testo curvato sotto
+    </label>
   </div>
 
-  <div class="group">
-    <label><input type="checkbox" id="enableTexts"> Abilita testi (clicca per mostrare controlli testuali)</label>
-
-    <div id="textsPanel" class="hidden">
-      <div class="small">Per ogni posizione puoi abilitare il testo singolo e configurare font-size e offset X/Y (mm). I valori di offset sono relativi alla posizione predefinita del testo rispetto all'immagine.</div>
-
-      <div style="margin-top:8px;" class="col2">
-        <!-- TOP -->
-        <div class="group">
-          <label><input type="checkbox" id="enableTop"> Testo SOPRA</label>
-          <input type="text" id="textTop" placeholder="Testo sopra" style="width:100%">
-          <div class="row">
-            <label>Font size (px):
-              <input type="number" id="fontTop" value="18" step="1" style="width:90px">
-            </label>
-            <label>Distanza dall'immagine (mm):
-              <input type="number" id="distTop" value="3" step="0.1" style="width:90px">
-            </label>
-            <label>Offset X (mm):
-              <input type="number" id="offTopX" value="0" step="0.1" style="width:80px">
-            </label>
-            <label>Offset Y (mm):
-              <input type="number" id="offTopY" value="0" step="0.1" style="width:80px">
-            </label>
-          </div>
-        </div>
-
-        <!-- BOTTOM -->
-        <div class="group">
-          <label><input type="checkbox" id="enableBottom"> Testo SOTTO</label>
-          <input type="text" id="textBottom" placeholder="Testo sotto" style="width:100%">
-          <div class="row">
-            <label>Font size (px):
-              <input type="number" id="fontBottom" value="18" step="1" style="width:90px">
-            </label>
-            <label>Distanza dall'immagine (mm):
-              <input type="number" id="distBottom" value="3" step="0.1" style="width:90px">
-            </label>
-            <label>Offset X (mm):
-              <input type="number" id="offBottomX" value="0" step="0.1" style="width:80px">
-            </label>
-            <label>Offset Y (mm):
-              <input type="number" id="offBottomY" value="0" step="0.1" style="width:80px">
-            </label>
-          </div>
-        </div>
-
-        <!-- LEFT -->
-        <div class="group">
-          <label><input type="checkbox" id="enableLeft"> Testo SINISTRA (verticale BOTTOM→TOP)</label>
-          <input type="text" id="textLeft" placeholder="Testo lato sinistro" style="width:100%">
-          <div class="row">
-            <label>Font size (px):
-              <input type="number" id="fontLeft" value="16" step="1" style="width:90px">
-            </label>
-            <label>Distanza dall'immagine (mm):
-              <input type="number" id="distLeft" value="3" step="0.1" style="width:90px">
-            </label>
-            <label>Offset X (mm):
-              <input type="number" id="offLeftX" value="0" step="0.1" style="width:80px">
-            </label>
-            <label>Offset Y (mm):
-              <input type="number" id="offLeftY" value="0" step="0.1" style="width:80px">
-            </label>
-          </div>
-        </div>
-
-        <!-- RIGHT -->
-        <div class="group">
-          <label><input type="checkbox" id="enableRight"> Testo DESTRA (verticale TOP→BOTTOM)</label>
-          <input type="text" id="textRight" placeholder="Testo lato destro" style="width:100%">
-          <div class="row">
-            <label>Font size (px):
-              <input type="number" id="fontRight" value="16" step="1" style="width:90px">
-            </label>
-            <label>Distanza dall'immagine (mm):
-              <input type="number" id="distRight" value="3" step="0.1" style="width:90px">
-            </label>
-            <label>Offset X (mm):
-              <input type="number" id="offRightX" value="0" step="0.1" style="width:80px">
-            </label>
-            <label>Offset Y (mm):
-              <input type="number" id="offRightY" value="0" step="0.1" style="width:80px">
-            </label>
-          </div>
-        </div>
-
-      </div> <!-- col2 -->
-
-      <div style="margin-top:10px;" class="group">
-        <strong>Testo curvato (solo sopra o sotto)</strong>
-        <div class="row" style="margin-top:8px;">
-          <label>Tipo:
-            <select id="curvedType">
-              <option value="none">Nessuna</option>
-              <option value="top">Curvato SOPRA (convesso)</option>
-              <option value="bottom">Curvato SOTTO (concavo)</option>
-            </select>
-          </label>
-
-          <label>Testo curvato:
-            <input type="text" id="curvedText" placeholder="Testo curvato (una riga)">
-          </label>
-
-          <label>Font size (px):
-            <input type="number" id="curvedFont" value="18" step="1" style="width:90px">
-          </label>
-
-          <label>Raggio (mm):
-            <input type="number" id="curvedRadius" value="8" step="0.5" style="width:90px">
-          </label>
-
-          <label>Offset X (mm):
-            <input type="number" id="offCurvedX" value="0" step="0.1" style="width:80px">
-          </label>
-
-          <label>Offset Y (mm):
-            <input type="number" id="offCurvedY" value="0" step="0.1" style="width:80px">
-          </label>
-        </div>
-        <div class="small" style="margin-top:6px">Nota: raggio di default impostato per essere vicino all'immagine (≤5 mm), puoi aumentarlo se vuoi più spazio.</div>
-      </div>
-
-    </div> <!-- textsPanel -->
-  </div>
-
-  <div style="margin-top:10px;">
-    <button id="generate">Genera ZPL</button>
-    <button id="download" style="display:none;">Scarica .zpl</button>
-  </div>
+  <button id="generate">Genera ZPL</button>
+  <button id="download" style="display:none;">Scarica file .zpl</button>
 
   <h3>Anteprima etichetta:</h3>
   <canvas id="preview"></canvas>
 
   <script>
-    // DPI e conversioni
-    const dpi = 203;
-    const mmToPx = mm => Math.round(mm * dpi / 25.4);
-    const cmToPx = cm => Math.round(cm * dpi / 2.54);
+    // Conversione cm -> pixel per 203 dpi (8 px/mm)
+    const cmToPx = cm => Math.round(cm * 203 / 2.54);
+    const marginPx = cmToPx(0.5); // margine 0,5 cm per lato
 
-    // Toggle pannello testi
-    document.getElementById('enableTexts').addEventListener('change', (e) => {
-      const panel = document.getElementById('textsPanel');
-      panel.className = e.target.checked ? '' : 'hidden';
+    const enableTexts = document.getElementById('enableTexts');
+    const textOptions = document.getElementById('textOptions');
+
+    enableTexts.addEventListener('change', () => {
+      textOptions.style.display = enableTexts.checked ? 'block' : 'none';
     });
-
-    // Funzione per disegnare testo curvo. invert=false -> arco convesso (sopra),
-    // invert=true -> arco concavo (sotto), e risolve il problema di specchiatura.
-    function drawTextOnArc(ctx, text, centerX, centerY, radius, fontSizePx, invert=false) {
-      ctx.save();
-      ctx.font = `${fontSizePx}px Arial`;
-      ctx.fillStyle = 'black';
-      const letters = text.split('');
-      const widths = letters.map(ch => ctx.measureText(ch).width);
-      const totalWidth = widths.reduce((a,b)=>a+b,0);
-      // arco (lunghezza) = totalWidth; angolo totale = arco / radius
-      let totalAngle = totalWidth / radius;
-      // start angle: vogliamo centrarlo a 0
-      let startAngle = - totalAngle / 2;
-      // per invert=false (sopra): percorriamo da startAngle a startAngle+totalAngle
-      // per invert=true (sotto): vogliamo testo concavo verso l'alto; tracciamo simile ma invertendo verticalmente e ruotando caratteri
-      let curAngle = startAngle;
-
-      for (let i=0;i<letters.length;i++) {
-        const w = widths[i];
-        const halfAng = (w/2) / radius;
-        curAngle += halfAng;
-        // posizione punto sulla circonferenza (usiamo sin/cos)
-        // per arco sopra (invert=false): y = centerY - radius * cos, x = centerX + radius * sin
-        let x = centerX + radius * Math.sin(curAngle);
-        let y = centerY - radius * Math.cos(curAngle);
-        ctx.save();
-        ctx.translate(x, y);
-        // rotazione tangent: +curAngle
-        if (!invert) {
-          ctx.rotate(curAngle);
-          // draw character; baseline center
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(letters[i], 0, 0);
-        } else {
-          // per concavo (sotto): invertiamo radialmente e ruotiamo di PI (per non specchiare)
-          // posizioniamo sul lato inferiore (centerY + radius) con rotazione opposta
-          // alternativa: calcolare posizione come punto dell'arco sotto:
-          // recompute x,y for inverted arc (mirror vertical)
-          // but easier: rotate by (curAngle + Math.PI) and invert y offset
-          // adjust position:
-          // compute inverted point:
-          const xi = centerX + radius * Math.sin(curAngle);
-          const yi = centerY + radius * Math.cos(curAngle);
-          // move there:
-          ctx.setTransform(1,0,0,1,0,0); // reset transform to avoid stacking
-          ctx.translate(xi, yi);
-          ctx.rotate(curAngle + Math.PI);
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(letters[i], 0, 0);
-        }
-        ctx.restore();
-        curAngle += halfAng;
-      }
-
-      ctx.restore();
-    }
-
-    // Funzione per disegnare testo verticale (sinistra bottom->top, destra top->bottom)
-    function drawVerticalText(ctx, text, fontSizePx, x, yStart, direction, spacingPx) {
-      // direction: 'bottom-to-top' or 'top-to-bottom'
-      ctx.save();
-      ctx.font = `${fontSizePx}px Arial`;
-      ctx.fillStyle = 'black';
-      const letters = text.split('');
-      for (let i = 0; i < letters.length; i++) {
-        const ch = letters[i];
-        // measure width to help placement (we use fontSize as step)
-        const w = ctx.measureText(ch).width;
-        if (direction === 'bottom-to-top') {
-          // place starting at yStart and move up
-          const y = yStart - i * spacingPx;
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(-Math.PI/2); // rotate -90deg: characters appear upright bottom->top
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(ch, 0, 0);
-          ctx.restore();
-        } else {
-          // top-to-bottom
-          const y = yStart + i * spacingPx;
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(Math.PI/2); // rotate +90deg
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(ch, 0, 0);
-          ctx.restore();
-        }
-      }
-      ctx.restore();
-    }
 
     document.getElementById('generate').addEventListener('click', async () => {
       const imgInput = document.getElementById('imageInput').files[0];
-      if (!imgInput) return alert("Carica prima un'immagine.");
+      if (!imgInput) return alert('Carica prima un\'immagine.');
 
-      // leggi valori base e converti in px
-      let labelWpx = cmToPx(+document.getElementById('labelWidth').value);
-      let labelHpx = cmToPx(+document.getElementById('labelHeight').value);
-      const orientation = document.getElementById('orientation').value;
-      if (orientation === 'landscape') [labelWpx, labelHpx] = [labelHpx, labelWpx];
-
-      const imgWpx = cmToPx(+document.getElementById('imgWidth').value);
-      const imgHpx = cmToPx(+document.getElementById('imgHeight').value);
+      const labelWidthPx = cmToPx(+document.getElementById('labelWidth').value);
+      const labelHeightPx = cmToPx(+document.getElementById('labelHeight').value);
+      const imgWidthPx = cmToPx(+document.getElementById('imgWidth').value);
+      const imgHeightPx = cmToPx(+document.getElementById('imgHeight').value);
       const numImages = +document.getElementById('numImages').value;
-      const offsetXpx = mmToPx(+document.getElementById('offsetX').value);
-      const offsetYpx = mmToPx(+document.getElementById('offsetY').value);
-      const gapPx = mmToPx(+document.getElementById('gap').value);
+      const position = document.getElementById('position').value;
 
-      // testi abilitati?
-      const textsEnabled = document.getElementById('enableTexts').checked;
-
-      // carica immagine
       const img = new Image();
       img.src = URL.createObjectURL(imgInput);
       await img.decode();
 
-      // canvas
       const canvas = document.getElementById('preview');
-      canvas.width = labelWpx;
-      canvas.height = labelHpx;
+      canvas.width = labelWidthPx;
+      canvas.height = labelHeightPx;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = 'white';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // layout immagini
-      const usableWidth = labelWpx - offsetXpx;
-      const perRow = Math.max(1, Math.floor((usableWidth + gapPx) / (imgWpx + gapPx)));
+      const perRow = Math.floor((labelWidthPx + marginPx) / (imgWidthPx + marginPx));
       const rows = Math.ceil(numImages / perRow);
+      const totalHeight = rows * imgHeightPx + (rows - 1) * marginPx;
 
-      const totalImgsWidth = Math.min(perRow, numImages) * imgWpx + (Math.min(perRow, numImages) - 1) * gapPx;
-      const totalImgsHeight = rows * imgHpx + (rows - 1) * gapPx;
-
-      // controlli offset
-      if (offsetXpx < 0 || offsetYpx < 0) {
-        alert("⚠️ Offset globale non può essere negativo.");
-        return;
-      }
-      if (offsetXpx + totalImgsWidth > labelWpx || offsetYpx + totalImgsHeight > labelHpx) {
-        alert("⚠️ Alcune immagini superano i limiti dell'etichetta. Controlla misure, offset o orientamento.");
+      if (imgWidthPx > labelWidthPx || totalHeight > labelHeightPx) {
+        alert("⚠️ Le immagini non rientrano nei bordi dell'etichetta.");
         return;
       }
 
-      // disegna immagini e salva bbox
-      const imgBBoxes = [];
-      for (let i=0;i<numImages;i++) {
+      let offsetX, offsetY;
+      if (position === "center") {
+        offsetX = Math.round((labelWidthPx - (perRow * imgWidthPx + (perRow - 1) * marginPx)) / 2);
+        offsetY = Math.round((labelHeightPx - totalHeight) / 2);
+      } else {
+        offsetX = marginPx;
+        offsetY = marginPx;
+      }
+
+      // Disegno immagini
+      for (let i = 0; i < numImages; i++) {
         const col = i % perRow;
         const row = Math.floor(i / perRow);
-        const x = offsetXpx + col * (imgWpx + gapPx);
-        const y = offsetYpx + row * (imgHpx + gapPx);
-        ctx.drawImage(img, x, y, imgWpx, imgHpx);
-        imgBBoxes.push({x, y, w: imgWpx, h: imgHpx});
-      }
+        const x = offsetX + col * (imgWidthPx + marginPx);
+        const y = offsetY + row * (imgHeightPx + marginPx);
+        ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
 
-      // se testi disabilitati -> generiamo diretto ZPL dalle immagini
-      // altrimenti disegniamo testi per ogni immagine
-      let allBounds = [];
+        // Sezione testi abilitata
+        if (enableTexts.checked) {
+          ctx.fillStyle = "black";
+          ctx.font = `${cmToPx(0.4)}px Arial`;
+          ctx.textAlign = "center";
+          const centerX = x + imgWidthPx / 2;
+          const centerY = y + imgHeightPx / 2;
 
-      if (textsEnabled) {
-        // prendi valori per tutti i testi
-        const topEnabled = document.getElementById('enableTop').checked;
-        const bottomEnabled = document.getElementById('enableBottom').checked;
-        const leftEnabled = document.getElementById('enableLeft').checked;
-        const rightEnabled = document.getElementById('enableRight').checked;
+          const textTop = document.getElementById('textTop').value;
+          const textBottom = document.getElementById('textBottom').value;
+          const textLeft = document.getElementById('textLeft').value;
+          const textRight = document.getElementById('textRight').value;
 
-        const textTop = document.getElementById('textTop').value || '';
-        const textBottom = document.getElementById('textBottom').value || '';
-        const textLeft = document.getElementById('textLeft').value || '';
-        const textRight = document.getElementById('textRight').value || '';
+          const offsetTop = cmToPx(+document.getElementById('offsetTop').value);
+          const offsetBottom = cmToPx(+document.getElementById('offsetBottom').value);
+          const offsetLeft = cmToPx(+document.getElementById('offsetLeft').value);
+          const offsetRight = cmToPx(+document.getElementById('offsetRight').value);
 
-        const fontTop = +document.getElementById('fontTop').value;
-        const fontBottom = +document.getElementById('fontBottom').value;
-        const fontLeft = +document.getElementById('fontLeft').value;
-        const fontRight = +document.getElementById('fontRight').value;
+          const curveTop = document.getElementById('curveTop').checked;
+          const curveBottom = document.getElementById('curveBottom').checked;
 
-        const distTopPx = mmToPx(+document.getElementById('distTop').value);
-        const distBottomPx = mmToPx(+document.getElementById('distBottom').value);
-        const distLeftPx = mmToPx(+document.getElementById('distLeft').value);
-        const distRightPx = mmToPx(+document.getElementById('distRight').value);
-
-        const offTopX = mmToPx(+document.getElementById('offTopX').value);
-        const offTopY = mmToPx(+document.getElementById('offTopY').value);
-        const offBottomX = mmToPx(+document.getElementById('offBottomX').value);
-        const offBottomY = mmToPx(+document.getElementById('offBottomY').value);
-        const offLeftX = mmToPx(+document.getElementById('offLeftX').value);
-        const offLeftY = mmToPx(+document.getElementById('offLeftY').value);
-        const offRightX = mmToPx(+document.getElementById('offRightX').value);
-        const offRightY = mmToPx(+document.getElementById('offRightY').value);
-
-        // curvato
-        const curvedType = document.getElementById('curvedType').value;
-        const curvedText = document.getElementById('curvedText').value || '';
-        const curvedFont = +document.getElementById('curvedFont').value;
-        const curvedRadiusPx = mmToPx(+document.getElementById('curvedRadius').value);
-        const offCurvedX = mmToPx(+document.getElementById('offCurvedX').value);
-        const offCurvedY = mmToPx(+document.getElementById('offCurvedY').value);
-
-        // disegna testi per ogni immagine (single-line)
-        for (const box of imgBBoxes) {
-          // TOP
-          if (topEnabled && textTop) {
-            ctx.save();
-            ctx.font = `${fontTop}px Arial`;
-            ctx.fillStyle = 'black';
-            const x = Math.round(box.x + box.w/2 + offTopX);
-            const y = Math.round(box.y - distTopPx + offTopY) - Math.round(fontTop/2);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(textTop, x, y);
-            ctx.restore();
-            const w = ctx.measureText(textTop).width; const h = fontTop;
-            allBounds.push({left: x - w/2, top: y - h/2, right: x + w/2, bottom: y + h/2});
+          // Testo sopra
+          if (textTop) {
+            if (curveTop) {
+              const radius = imgWidthPx / 1.5;
+              const angleStart = Math.PI; 
+              const angleStep = Math.PI / (textTop.length + 1);
+              for (let j = 0; j < textTop.length; j++) {
+                const angle = angleStart + angleStep * (j + 1);
+                const tx = centerX + radius * Math.cos(angle);
+                const ty = y - offsetTop + radius * Math.sin(angle);
+                ctx.save();
+                ctx.translate(tx, ty);
+                ctx.rotate(angle + Math.PI / 2);
+                ctx.fillText(textTop[j], 0, 0);
+                ctx.restore();
+              }
+            } else {
+              ctx.fillText(textTop, centerX, y - offsetTop);
+            }
           }
 
-          // BOTTOM
-          if (bottomEnabled && textBottom) {
-            ctx.save();
-            ctx.font = `${fontBottom}px Arial`;
-            ctx.fillStyle = 'black';
-            const x = Math.round(box.x + box.w/2 + offBottomX);
-            const y = Math.round(box.y + box.h + distBottomPx + offBottomY) + Math.round(fontBottom/2);
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(textBottom, x, y);
-            ctx.restore();
-            const w = ctx.measureText(textBottom).width; const h = fontBottom;
-            allBounds.push({left: x - w/2, top: y - h/2, right: x + w/2, bottom: y + h/2});
+          // Testo sotto
+          if (textBottom) {
+            if (curveBottom) {
+              const radius = imgWidthPx / 1.5;
+              const angleStart = 0;
+              const angleStep = Math.PI / (textBottom.length + 1);
+              for (let j = 0; j < textBottom.length; j++) {
+                const angle = angleStart + angleStep * (j + 1);
+                const tx = centerX + radius * Math.cos(angle);
+                const ty = y + imgHeightPx + offsetBottom + radius * Math.sin(angle);
+                ctx.save();
+                ctx.translate(tx, ty);
+                ctx.rotate(angle - Math.PI / 2);
+                ctx.fillText(textBottom[j], 0, 0);
+                ctx.restore();
+              }
+            } else {
+              ctx.fillText(textBottom, centerX, y + imgHeightPx + offsetBottom);
+            }
           }
 
-          // LEFT vertical bottom->top
-          if (leftEnabled && textLeft) {
+          // Testo sinistro (verticale dal basso verso l'alto)
+          if (textLeft) {
             ctx.save();
-            ctx.font = `${fontLeft}px Arial`;
-            ctx.fillStyle = 'black';
-            // x baseline: left of image minus distLeft minus half font (plus offsetX)
-            const x = Math.round(box.x - distLeftPx + offLeftX);
-            // y start: bottom of image + offLeftY (we start from bottom and go up)
-            const yStart = Math.round(box.y + box.h - offLeftY);
-            // spacing: use fontLeft + 2 px
-            const spacing = fontLeft + 2;
-            // draw vertical
-            drawVerticalText(ctx, textLeft, fontLeft, x, yStart, 'bottom-to-top', spacing);
-            // approximate bounding box:
-            const height = (textLeft.length) * spacing;
-            const width = ctx.measureText('M').width + 2; // approx char width
-            allBounds.push({left: x - width - 2, top: yStart - height, right: x + 2, bottom: yStart + 2});
+            ctx.translate(x - offsetLeft, y + imgHeightPx);
+            ctx.rotate(-Math.PI / 2);
+            ctx.textAlign = "center";
+            ctx.fillText(textLeft, imgHeightPx / 2, 0);
             ctx.restore();
           }
 
-          // RIGHT vertical top->bottom
-          if (rightEnabled && textRight) {
+          // Testo destro (verticale dall'alto verso il basso)
+          if (textRight) {
             ctx.save();
-            ctx.font = `${fontRight}px Arial`;
-            ctx.fillStyle = 'black';
-            const x = Math.round(box.x + box.w + distRightPx + offRightX);
-            const yStart = Math.round(box.y + offRightY);
-            const spacing = fontRight + 2;
-            drawVerticalText(ctx, textRight, fontRight, x, yStart, 'top-to-bottom', spacing);
-            const height = (textRight.length) * spacing;
-            const width = ctx.measureText('M').width + 2;
-            allBounds.push({left: x - 2, top: yStart - 2, right: x + width + 2, bottom: yStart + height});
+            ctx.translate(x + imgWidthPx + offsetRight, y);
+            ctx.rotate(Math.PI / 2);
+            ctx.textAlign = "center";
+            ctx.fillText(textRight, imgHeightPx / 2, 0);
             ctx.restore();
           }
-        } // end for each image
-
-        // Curvato: applicato alla PRIMA immagine (se multi-immagine)
-        if ((curvedType === 'top' || curvedType === 'bottom') && curvedText) {
-          const refBox = imgBBoxes[0];
-          const cx = refBox.x + refBox.w/2 + offCurvedX;
-          if (curvedType === 'top') {
-            // centro del cerchio per arco sopra: leggermente sopra l'immagine
-            // vogliamo che la distanza tra immagine e testo sia <=5mm di default
-            const minDistPx = mmToPx(5);
-            const radius = Math.max(curvedRadiusPx, minDistPx);
-            const centerY = refBox.y - radius + offCurvedY;
-            drawTextOnArc(ctx, curvedText, cx, centerY, radius, curvedFont, false);
-            // bounding approssimativo
-            allBounds.push({left: cx - radius - 20, top: centerY - radius - curvedFont, right: cx + radius + 20, bottom: centerY + 10});
-          } else {
-            // bottom: concavo (testo leggibile, non specchiato)
-            const minDistPx = mmToPx(5);
-            const radius = Math.max(curvedRadiusPx, minDistPx);
-            const centerY = refBox.y + refBox.h + radius + offCurvedY;
-            drawTextOnArc(ctx, curvedText, cx, centerY, radius, curvedFont, true);
-            allBounds.push({left: cx - radius - 20, top: centerY - 10, right: cx + radius + 20, bottom: centerY + radius + curvedFont});
-          }
-        }
-      } // end if textsEnabled
-
-      // controllo finale bounding rispetto al canvas
-      for (const b of allBounds) {
-        if (!b) continue;
-        if (b.left < 0 || b.top < 0 || b.right > canvas.width || b.bottom > canvas.height) {
-          alert("⚠️ Testo o immagine eccede l'area stampabile. Controlla dimensioni, distanza o offset.");
-          return;
         }
       }
 
-      // Se siamo qui: tutto rientra → creiamo ZPL raster
-      const imageData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      // Conversione in ZPL
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
       let zplData = "";
       const widthBytes = Math.ceil(canvas.width / 8);
       const totalBytes = widthBytes * canvas.height;
 
-      for (let y=0;y<canvas.height;y++) {
+      for (let y = 0; y < canvas.height; y++) {
         let line = "";
-        for (let x=0;x<canvas.width;x++) {
-          const i = (y*canvas.width + x)*4;
-          const avg = (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
+        for (let x = 0; x < canvas.width; x++) {
+          const i = (y * canvas.width + x) * 4;
+          const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
           line += avg > 127 ? "0" : "1";
         }
         let hex = "";
-        for (let i=0;i<line.length;i+=8) {
-          hex += parseInt(line.substr(i,8),2).toString(16).padStart(2,'0');
+        for (let i = 0; i < line.length; i += 8) {
+          hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, '0');
         }
         zplData += hex.toUpperCase() + "\n";
       }
 
       const zplCode =
         `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n` +
-        `^XA\n^FO${offsetXpx},${offsetYpx}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+        `^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-      // download
-      const blob = new Blob([zplCode], {type:'text/plain'});
+      const blob = new Blob([zplCode], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
-      const dl = document.getElementById('download');
-      dl.style.display = 'inline-block';
-      dl.onclick = () => {
+      const downloadBtn = document.getElementById('download');
+      downloadBtn.style.display = "inline-block";
+      downloadBtn.onclick = () => {
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'etichetta.zpl';
+        a.download = "etichetta.zpl";
         a.click();
       };
-
-      alert("Anteprima generata correttamente — puoi scaricare il .zpl se vuoi.");
     });
-
-    // helper conversions definizioni (ridondanti dentro per chiarezza)
-    function mmToPx(mm) { return Math.round(mm * dpi / 25.4); }
-    function cmToPx(cm) { return Math.round(cm * dpi / 2.54); }
   </script>
 </body>
 </html>
