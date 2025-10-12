@@ -9,12 +9,10 @@ body { font-family: Arial, sans-serif; margin: 20px; font-size: 16px; }
 label { display: block; margin-top: 10px; }
 input, select, button { font-size: 16px; margin-top: 4px; }
 canvas { border: 1px solid #ccc; margin-top: 10px; background: white; display: block; }
-textarea { width: 100%; margin-top: 10px; font-size: 14px; }
-.section { border: 1px solid #ccc; padding: 10px; border-radius: 8px; margin-top: 10px; }
+.text-options { margin-left: 20px; padding: 10px; border-left: 2px solid #ddd; }
 </style>
 </head>
 <body>
-
 <h2>Generatore ZPL per Zebra ZT420 (203 dpi)</h2>
 
 <label>Carica immagine:
@@ -29,6 +27,21 @@ textarea { width: 100%; margin-top: 10px; font-size: 14px; }
   <input type="number" id="labelHeight" value="20.9" step="0.01">
 </label>
 
+<label>Orientamento:
+  <select id="orientation">
+    <option value="portrait">Verticale</option>
+    <option value="landscape">Orizzontale</option>
+  </select>
+</label>
+
+<label>Offset X immagine (mm):
+  <input type="number" id="offsetX" value="0" step="0.1">
+</label>
+
+<label>Offset Y immagine (mm):
+  <input type="number" id="offsetY" value="0" step="0.1">
+</label>
+
 <label>Larghezza immagine (cm):
   <input type="number" id="imgWidth" value="3.0" step="0.1">
 </label>
@@ -37,66 +50,32 @@ textarea { width: 100%; margin-top: 10px; font-size: 14px; }
   <input type="number" id="imgHeight" value="4.0" step="0.1">
 </label>
 
-<label>Offset immagine X (mm):
-  <input type="number" id="offsetImgX" value="0" step="0.1">
-</label>
-
-<label>Offset immagine Y (mm):
-  <input type="number" id="offsetImgY" value="0" step="0.1">
-</label>
-
-<label>Orientamento immagine:
-  <select id="orientation">
-    <option value="0">Orizzontale</option>
-    <option value="90">Verticale</option>
-  </select>
-</label>
-
 <label>Numero immagini:
   <input type="number" id="numImages" value="1" min="1">
 </label>
 
-<label>
-  <input type="checkbox" id="enableTexts"> Abilita testi
-</label>
+<label><input type="checkbox" id="enableText"> Abilita testi</label>
 
-<div id="textOptions" class="section" style="display:none;">
-<h4>Opzioni Testo</h4>
+<div id="textOptions" style="display:none;" class="text-options">
+  <label>Testo sopra immagine:
+    <input type="text" id="textTop" placeholder="Testo sopra">
+  </label>
+  <label>Curvatura testo sopra (0-180 gradi):
+    <input type="number" id="curveTop" value="0" min="0" max="180">
+  </label>
+  <label>Offset testo sopra (mm):
+    <input type="number" id="offsetTop" value="5" step="0.1">
+  </label>
 
-<label>Testo sopra immagine:
-  <input type="text" id="textTop" placeholder="Testo sopra">
-</label>
-<label>Offset Y sopra (mm):
-  <input type="number" id="offsetTop" value="5" step="0.1">
-</label>
-<label>Curvatura sopra (gradi, 0 = piatto):
-  <input type="number" id="curveTop" value="0" step="1" min="0" max="180">
-</label>
-
-<label>Testo sotto immagine:
-  <input type="text" id="textBottom" placeholder="Testo sotto">
-</label>
-<label>Offset Y sotto (mm):
-  <input type="number" id="offsetBottom" value="5" step="0.1">
-</label>
-<label>Curvatura sotto (gradi, 0 = piatto):
-  <input type="number" id="curveBottom" value="0" step="1" min="0" max="180">
-</label>
-
-<label>Testo a sinistra (verticale dal basso verso l'alto):
-  <input type="text" id="textLeft" placeholder="Testo sinistro">
-</label>
-<label>Offset X sinistra (mm):
-  <input type="number" id="offsetLeft" value="5" step="0.1">
-</label>
-
-<label>Testo a destra (verticale dall'alto verso il basso):
-  <input type="text" id="textRight" placeholder="Testo destro">
-</label>
-<label>Offset X destra (mm):
-  <input type="number" id="offsetRight" value="5" step="0.1">
-</label>
-
+  <label>Testo sotto immagine:
+    <input type="text" id="textBottom" placeholder="Testo sotto">
+  </label>
+  <label>Curvatura testo sotto (0-180 gradi):
+    <input type="number" id="curveBottom" value="0" min="0" max="180">
+  </label>
+  <label>Offset testo sotto (mm):
+    <input type="number" id="offsetBottom" value="5" step="0.1">
+  </label>
 </div>
 
 <button id="generate">Genera ZPL</button>
@@ -106,149 +85,99 @@ textarea { width: 100%; margin-top: 10px; font-size: 14px; }
 <canvas id="preview"></canvas>
 
 <script>
-// Conversione
 const cmToPx = cm => Math.round(cm * 203 / 2.54);
 const mmToPx = mm => Math.round(mm * 203 / 25.4);
 
-const enableTexts = document.getElementById('enableTexts');
-const textOptions = document.getElementById('textOptions');
-enableTexts.addEventListener('change', () => {
-  textOptions.style.display = enableTexts.checked ? 'block' : 'none';
+document.getElementById('enableText').addEventListener('change', e => {
+  document.getElementById('textOptions').style.display = e.target.checked ? 'block' : 'none';
 });
 
 document.getElementById('generate').addEventListener('click', async () => {
   const imgInput = document.getElementById('imageInput').files[0];
-  if(!imgInput) return alert('Carica prima un\'immagine.');
+  if (!imgInput) return;
 
   const labelWidthPx = cmToPx(+document.getElementById('labelWidth').value);
   const labelHeightPx = cmToPx(+document.getElementById('labelHeight').value);
-  let imgWidthPx = cmToPx(+document.getElementById('imgWidth').value);
-  let imgHeightPx = cmToPx(+document.getElementById('imgHeight').value);
-
-  const offsetX = mmToPx(+document.getElementById('offsetImgX').value);
-  const offsetY = mmToPx(+document.getElementById('offsetImgY').value);
-
+  const imgWidthPx = cmToPx(+document.getElementById('imgWidth').value);
+  const imgHeightPx = cmToPx(+document.getElementById('imgHeight').value);
   const numImages = +document.getElementById('numImages').value;
-  const orientation = +document.getElementById('orientation').value;
+  const orientation = document.getElementById('orientation').value;
+  const offsetX = mmToPx(+document.getElementById('offsetX').value);
+  const offsetY = mmToPx(+document.getElementById('offsetY').value);
 
   const img = new Image();
   img.src = URL.createObjectURL(imgInput);
   await img.decode();
 
   const canvas = document.getElementById('preview');
+  const ctx = canvas.getContext('2d');
   canvas.width = labelWidthPx;
   canvas.height = labelHeightPx;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle='white';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  for(let i=0;i<numImages;i++){
-    let x = offsetX;
-    let y = offsetY;
-
-    ctx.save();
-    // ruota intorno al centro dell'immagine
-    ctx.translate(x + imgWidthPx/2, y + imgHeightPx/2);
-    ctx.rotate(orientation*Math.PI/180);
-
-    let drawWidth = imgWidthPx;
-    let drawHeight = imgHeightPx;
-    if(orientation===90) [drawWidth,drawHeight]=[imgHeightPx,imgWidthPx];
-
-    ctx.drawImage(img, -drawWidth/2, -drawHeight/2, drawWidth, drawHeight);
-
-    if(enableTexts.checked){
-      ctx.fillStyle='black';
-      ctx.font=`${cmToPx(0.4)}px Arial`;
-      ctx.textAlign='center';
-
-      const centerX = 0;
-      const centerY = 0;
-
-      // valori testi
-      const textTop=document.getElementById('textTop').value;
-      const textBottom=document.getElementById('textBottom').value;
-      const textLeft=document.getElementById('textLeft').value;
-      const textRight=document.getElementById('textRight').value;
-
-      const offsetTop=mmToPx(+document.getElementById('offsetTop').value);
-      const offsetBottom=mmToPx(+document.getElementById('offsetBottom').value);
-      const offsetLeft=mmToPx(+document.getElementById('offsetLeft').value);
-      const offsetRight=mmToPx(+document.getElementById('offsetRight').value);
-
-      const degreesTop=+document.getElementById('curveTop').value;
-      const degreesBottom=+document.getElementById('curveBottom').value;
-
-      // Testo sopra
-      if(textTop){
-        if(degreesTop>0){
-          const totalRad=degreesTop*Math.PI/180;
-          const angleStep=totalRad/(textTop.length-1||1);
-          const startAngle=(Math.PI-totalRad)/2;
-          const radius=drawWidth; 
-          for(let j=0;j<textTop.length;j++){
-            const angle=startAngle + j*angleStep;
-            const tx=centerX + radius*Math.cos(angle);
-            const ty=centerY - drawHeight/2 - offsetTop + radius*Math.sin(angle);
-            ctx.save();
-            ctx.translate(tx,ty);
-            ctx.rotate(angle+Math.PI/2);
-            ctx.fillText(textTop[j],0,0);
-            ctx.restore();
-          }
-        } else ctx.fillText(textTop,centerX,centerY - drawHeight/2 - offsetTop);
-      }
-
-      // Testo sotto
-      if(textBottom){
-        if(degreesBottom>0){
-          const totalRad=degreesBottom*Math.PI/180;
-          const angleStep=totalRad/(textBottom.length-1||1);
-          const startAngle=(Math.PI-totalRad)/2;
-          const radius=drawWidth;
-          for(let j=0;j<textBottom.length;j++){
-            const angle=startAngle + j*angleStep;
-            const tx=centerX + radius*Math.cos(angle);
-            const ty=centerY + drawHeight/2 + offsetBottom + radius*Math.sin(angle);
-            ctx.save();
-            ctx.translate(tx,ty);
-            ctx.rotate(angle-Math.PI/2);
-            ctx.fillText(textBottom[j],0,0);
-            ctx.restore();
-          }
-        } else ctx.fillText(textBottom,centerX,centerY + drawHeight/2 + offsetBottom);
-      }
-
-      // Testo sinistro verticale
-      if(textLeft){
-        ctx.save();
-        ctx.translate(centerX - drawWidth/2 - offsetLeft, centerY + drawHeight/2);
-        ctx.rotate(-Math.PI/2);
-        ctx.textAlign='center';
-        ctx.fillText(textLeft,drawHeight/2,0);
-        ctx.restore();
-      }
-
-      // Testo destro verticale
-      if(textRight){
-        ctx.save();
-        ctx.translate(centerX + drawWidth/2 + offsetRight, centerY - drawHeight/2);
-        ctx.rotate(Math.PI/2);
-        ctx.textAlign='center';
-        ctx.fillText(textRight,drawHeight/2,0);
-        ctx.restore();
-      }
-
-    }
-
-    ctx.restore();
+  ctx.save();
+  if (orientation === "landscape") {
+    ctx.translate(canvas.width/2, canvas.height/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.translate(-canvas.height/2, -canvas.width/2);
   }
 
-  // Conversione ZPL
+  const startX = offsetX;
+  const startY = offsetY;
+
+  for (let i=0;i<numImages;i++) {
+    ctx.drawImage(img, startX, startY, imgWidthPx, imgHeightPx);
+  }
+
+  if (document.getElementById('enableText').checked) {
+    ctx.fillStyle = "black";
+    ctx.textAlign = "center";
+    ctx.font = "20px Arial";
+
+    const textTop = document.getElementById('textTop').value;
+    const textBottom = document.getElementById('textBottom').value;
+    const curveTop = Math.min(180, +document.getElementById('curveTop').value);
+    const curveBottom = Math.min(180, +document.getElementById('curveBottom').value);
+    const offsetTop = mmToPx(+document.getElementById('offsetTop').value);
+    const offsetBottom = mmToPx(+document.getElementById('offsetBottom').value);
+
+    const centerX = startX + imgWidthPx / 2;
+    const topY = startY - offsetTop;
+    const bottomY = startY + imgHeightPx + offsetBottom;
+
+    const drawCurvedText = (text, centerX, centerY, radius, angle, invert=false) => {
+      if(!text) return;
+      const chars = text.split("");
+      const totalAngle = (Math.PI * angle)/180;
+      const angleStep = chars.length>1 ? totalAngle/(chars.length-1) : 0;
+      const startAngle = -totalAngle/2;
+      chars.forEach((char,i)=>{
+        const currentAngle = startAngle + i*angleStep;
+        const x = centerX + radius*Math.sin(currentAngle);
+        const y = centerY - (invert?-1:1)*radius*Math.cos(currentAngle);
+        ctx.fillText(char, x, y); // le lettere non ruotano
+      });
+    };
+
+    if(textTop) {
+      if(curveTop>0) drawCurvedText(textTop, centerX, topY, 100, curveTop, false);
+      else ctx.fillText(textTop, centerX, topY);
+    }
+    if(textBottom) {
+      if(curveBottom>0) drawCurvedText(textBottom, centerX, bottomY, 100, curveBottom, true);
+      else ctx.fillText(textBottom, centerX, bottomY+20);
+    }
+  }
+
+  ctx.restore();
+
+  // Conversione in ZPL
   const imageData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-  let zplData="";
-  const widthBytes=Math.ceil(canvas.width/8);
-  const totalBytes=widthBytes*canvas.height;
+  let zplData = "";
+  const widthBytes = Math.ceil(canvas.width/8);
+  const totalBytes = widthBytes*canvas.height;
+
   for(let y=0;y<canvas.height;y++){
     let line="";
     for(let x=0;x<canvas.width;x++){
@@ -258,20 +187,19 @@ document.getElementById('generate').addEventListener('click', async () => {
     }
     let hex="";
     for(let i=0;i<line.length;i+=8){
-      hex+=parseInt(line.substr(i,8),2).toString(16).padStart(2,'0');
+      hex+=parseInt(line.substr(i,8),2).toString(16).padStart(2,"0");
     }
     zplData+=hex.toUpperCase()+"\n";
   }
 
-  const zplCode=`~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO0,0\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+  const zplCode=`~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-  const blob=new Blob([zplCode],{type:'text/plain'});
+  const blob=new Blob([zplCode],{type:"text/plain"});
   const url=URL.createObjectURL(blob);
-  const downloadBtn=document.getElementById('download');
+  const downloadBtn=document.getElementById("download");
   downloadBtn.style.display="inline-block";
-  downloadBtn.onclick=()=>{const a=document.createElement('a');a.href=url;a.download="etichetta.zpl";a.click();};
+  downloadBtn.onclick=()=>{ const a=document.createElement("a"); a.href=url; a.download="etichetta.zpl"; a.click(); };
 });
 </script>
-
 </body>
 </html>
