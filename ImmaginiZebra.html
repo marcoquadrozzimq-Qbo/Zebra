@@ -1,152 +1,449 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generatore Etichette Zebra (203dpi)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generatore Etichette Zebra (203dpi) - Testi & Curva</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; font-size: 16px; }
-    label { display: block; margin-top: 10px; }
-    input, select, button { font-size: 16px; margin-top: 4px; }
-    canvas { border: 1px solid #ccc; margin-top: 10px; background: white; display: block; }
-    textarea { width: 100%; margin-top: 10px; font-size: 14px; }
+    body { font-family: Arial, sans-serif; margin: 20px; font-size: 15px; color:#111; }
+    label { display:block; margin-top:10px; }
+    input, select, button { font-size:14px; margin-top:5px; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    canvas { border:1px solid #ccc; margin-top:12px; background:white; display:block; }
+    .group { border:1px solid #eee; padding:10px; margin-top:10px; border-radius:6px; }
+    .small { font-size:13px; color:#555; }
   </style>
 </head>
 <body>
-  <h2>Generatore ZPL per Zebra ZT420 (203 dpi)</h2>
+  <h2>Generatore ZPL per Zebra ZT420 (203 dpi) — immagini + testi</h2>
 
-  <label>Carica immagine:
-    <input type="file" id="imageInput" accept="image/*">
-  </label>
+  <div class="group">
+    <label>Carica immagine:
+      <input type="file" id="imageInput" accept="image/*">
+    </label>
 
-  <label>Larghezza etichetta (cm):
-    <input type="number" id="labelWidth" value="14.79" step="0.01">
-  </label>
+    <div class="row">
+      <label>Larghezza etichetta (cm):
+        <input type="number" id="labelWidth" value="14.79" step="0.01">
+      </label>
 
-  <label>Altezza etichetta (cm):
-    <input type="number" id="labelHeight" value="20.9" step="0.01">
-  </label>
+      <label>Altezza etichetta (cm):
+        <input type="number" id="labelHeight" value="20.9" step="0.01">
+      </label>
 
-  <label>Larghezza immagine (cm):
-    <input type="number" id="imgWidth" value="3.0" step="0.1">
-  </label>
+      <label>Orientamento:
+        <select id="orientation">
+          <option value="portrait">Verticale (Portrait)</option>
+          <option value="landscape">Orizzontale (Landscape)</option>
+        </select>
+      </label>
+    </div>
 
-  <label>Altezza immagine (cm):
-    <input type="number" id="imgHeight" value="4.0" step="0.1">
-  </label>
+    <div class="row">
+      <label>Larghezza immagine (cm):
+        <input type="number" id="imgWidth" value="3.0" step="0.1">
+      </label>
 
-  <label>Numero immagini:
-    <input type="number" id="numImages" value="1" min="1">
-  </label>
+      <label>Altezza immagine (cm):
+        <input type="number" id="imgHeight" value="4.0" step="0.1">
+      </label>
 
-  <label>Orientamento etichetta:
-    <select id="orientation">
-      <option value="portrait">Verticale (Portrait)</option>
-      <option value="landscape">Orizzontale (Landscape)</option>
-    </select>
-  </label>
+      <label>Numero immagini:
+        <input type="number" id="numImages" value="1" min="1">
+      </label>
+    </div>
 
-  <label>Offset X (mm):
-    <input type="number" id="offsetX" value="0" step="0.1">
-  </label>
+    <div class="row">
+      <label>Offset X (mm):
+        <input type="number" id="offsetX" value="0" step="0.1">
+      </label>
 
-  <label>Offset Y (mm):
-    <input type="number" id="offsetY" value="0" step="0.1">
-  </label>
+      <label>Offset Y (mm):
+        <input type="number" id="offsetY" value="0" step="0.1">
+      </label>
 
-  <button id="generate">Genera ZPL</button>
-  <button id="download" style="display:none;">Scarica file .zpl</button>
+      <label>Margine tra immagini (mm):
+        <input type="number" id="gap" value="5" step="0.1">
+      </label>
+    </div>
+  </div>
+
+  <div class="group">
+    <strong>Testi singoli (una riga ciascuno)</strong>
+    <div class="small">Spunta/cancella per abilitare. Puoi attivare più posizioni contemporaneamente.</div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+      <div>
+        <label><input type="checkbox" id="enableTop"> Testo SOPRA</label>
+        <input type="text" id="textTop" placeholder="Testo sopra" style="width:100%">
+        <div class="row">
+          <label>Font size (px):
+            <input type="number" id="fontTop" value="18" step="1" style="width:80px">
+          </label>
+          <label>Distanza dall'immagine (mm):
+            <input type="number" id="distTop" value="2" step="0.1" style="width:80px">
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label><input type="checkbox" id="enableBottom"> Testo SOTTO</label>
+        <input type="text" id="textBottom" placeholder="Testo sotto" style="width:100%">
+        <div class="row">
+          <label>Font size (px):
+            <input type="number" id="fontBottom" value="18" step="1" style="width:80px">
+          </label>
+          <label>Distanza dall'immagine (mm):
+            <input type="number" id="distBottom" value="2" step="0.1" style="width:80px">
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label><input type="checkbox" id="enableLeft"> Testo SINISTRA</label>
+        <input type="text" id="textLeft" placeholder="Testo lato sinistro" style="width:100%">
+        <div class="row">
+          <label>Font size (px):
+            <input type="number" id="fontLeft" value="16" step="1" style="width:80px">
+          </label>
+          <label>Distanza dall'immagine (mm):
+            <input type="number" id="distLeft" value="2" step="0.1" style="width:80px">
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label><input type="checkbox" id="enableRight"> Testo DESTRA</label>
+        <input type="text" id="textRight" placeholder="Testo lato destro" style="width:100%">
+        <div class="row">
+          <label>Font size (px):
+            <input type="number" id="fontRight" value="16" step="1" style="width:80px">
+          </label>
+          <label>Distanza dall'immagine (mm):
+            <input type="number" id="distRight" value="2" step="0.1" style="width:80px">
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="group">
+    <strong>Testo curvato (solo sopra o sotto)</strong>
+    <div class="row" style="margin-top:8px;">
+      <label>Tipo curva:
+        <select id="curvedType">
+          <option value="none">Nessuna</option>
+          <option value="top">Curvato SOPRA</option>
+          <option value="bottom">Curvato SOTTO</option>
+        </select>
+      </label>
+
+      <label>Testo curvato:
+        <input type="text" id="curvedText" placeholder="Testo curvato (una riga)">
+      </label>
+
+      <label>Font size (px):
+        <input type="number" id="curvedFont" value="18" step="1" style="width:80px">
+      </label>
+
+      <label>Raggio (mm):
+        <input type="number" id="curvedRadius" value="18" step="0.5" style="width:90px">
+      </label>
+    </div>
+  </div>
+
+  <div style="margin-top:10px;">
+    <button id="generate">Genera ZPL</button>
+    <button id="download" style="display:none;">Scarica .zpl</button>
+  </div>
 
   <h3>Anteprima etichetta:</h3>
   <canvas id="preview"></canvas>
 
   <script>
-    // Conversione cm -> pixel per 203 dpi (1 cm ≈ 80 px)
-    const cmToPx = cm => Math.round(cm * 203 / 2.54);
-    const mmToPx = mm => Math.round(mm * 203 / 25.4);
-    const marginPx = mmToPx(5); // margine 5 mm
+    // utilità di conversione (203 dpi -> 203 dots/inch -> 203/25.4 px per mm)
+    const dpi = 203;
+    const mmToPx = mm => Math.round(mm * dpi / 25.4);
+    const cmToPx = cm => Math.round(cm * dpi / 2.54);
+
+    // helper per disegnare testo curvo attorno ad un centro (raggio in px)
+    function drawTextOnArc(ctx, text, centerX, centerY, radius, fontSizePx, clockwise = true) {
+      ctx.save();
+      ctx.font = `${fontSizePx}px Arial`;
+      // misuriamo la larghezza totale del testo per calcolare l'angolo occupato
+      const letters = text.split('');
+      const widths = letters.map(ch => ctx.measureText(ch).width);
+      const totalWidth = widths.reduce((a,b)=>a+b,0);
+
+      // lunghezza dell'arco = totalWidth -> angolo = arcLen / radius
+      const arcLen = totalWidth;
+      const totalAngle = arcLen / radius; // in radianti
+
+      // start angle: vogliamo centrarlo, mezzo a sinistra -> destra
+      // angolo start (radians). Per testo sopra: start = -totalAngle/2 (così è centrato)
+      let startAngle = - totalAngle / 2;
+      // se disegno sotto, ruoteremo di pi (gestito fuori da questa funzione)
+      // per ogni carattere posizioniamo al centro del suo segmento
+      let curAngle = startAngle;
+
+      for (let i = 0; i < letters.length; i++) {
+        const w = widths[i];
+        const charAngle = (w / 2) / radius; // mezzo carattere
+        curAngle += charAngle;
+
+        // posizione del punto
+        const x = centerX + radius * Math.sin(curAngle) * (clockwise ? 1 : -1);
+        const y = centerY - radius * Math.cos(curAngle);
+
+        ctx.save();
+        ctx.translate(x, y);
+        // rotazione del carattere: tangent to arc
+        const rotation = curAngle * (clockwise ? 1 : -1);
+        ctx.rotate(rotation);
+        // draw char centered
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(letters[i], 0, 0);
+        ctx.restore();
+
+        curAngle += (w / 2) / radius; // passo al bordo successivo
+      }
+
+      ctx.restore();
+    }
 
     document.getElementById('generate').addEventListener('click', async () => {
       const imgInput = document.getElementById('imageInput').files[0];
-      if (!imgInput) return alert('Carica prima un\'immagine.');
+      if (!imgInput) return alert("Carica prima un'immagine.");
 
-      let labelWidthPx = cmToPx(+document.getElementById('labelWidth').value);
-      let labelHeightPx = cmToPx(+document.getElementById('labelHeight').value);
-      const imgWidthPx = cmToPx(+document.getElementById('imgWidth').value);
-      const imgHeightPx = cmToPx(+document.getElementById('imgHeight').value);
-      const numImages = +document.getElementById('numImages').value;
+      // leggi valori
+      let labelWpx = cmToPx(+document.getElementById('labelWidth').value);
+      let labelHpx = cmToPx(+document.getElementById('labelHeight').value);
       const orientation = document.getElementById('orientation').value;
-      const offsetX = mmToPx(+document.getElementById('offsetX').value);
-      const offsetY = mmToPx(+document.getElementById('offsetY').value);
+      if (orientation === 'landscape') [labelWpx, labelHpx] = [labelHpx, labelWpx];
 
-      // Se landscape, scambia larghezza e altezza
-      if (orientation === "landscape") {
-        [labelWidthPx, labelHeightPx] = [labelHeightPx, labelWidthPx];
-      }
+      const imgWpx = cmToPx(+document.getElementById('imgWidth').value);
+      const imgHpx = cmToPx(+document.getElementById('imgHeight').value);
+      const numImages = +document.getElementById('numImages').value;
+      const offsetXpx = mmToPx(+document.getElementById('offsetX').value);
+      const offsetYpx = mmToPx(+document.getElementById('offsetY').value);
+      const gapPx = mmToPx(+document.getElementById('gap').value);
 
+      // testi
+      const topEnabled = document.getElementById('enableTop').checked;
+      const bottomEnabled = document.getElementById('enableBottom').checked;
+      const leftEnabled = document.getElementById('enableLeft').checked;
+      const rightEnabled = document.getElementById('enableRight').checked;
+
+      const textTop = document.getElementById('textTop').value || '';
+      const textBottom = document.getElementById('textBottom').value || '';
+      const textLeft = document.getElementById('textLeft').value || '';
+      const textRight = document.getElementById('textRight').value || '';
+
+      const fontTop = +document.getElementById('fontTop').value;
+      const fontBottom = +document.getElementById('fontBottom').value;
+      const fontLeft = +document.getElementById('fontLeft').value;
+      const fontRight = +document.getElementById('fontRight').value;
+
+      const distTopPx = mmToPx(+document.getElementById('distTop').value);
+      const distBottomPx = mmToPx(+document.getElementById('distBottom').value);
+      const distLeftPx = mmToPx(+document.getElementById('distLeft').value);
+      const distRightPx = mmToPx(+document.getElementById('distRight').value);
+
+      // curvato
+      const curvedType = document.getElementById('curvedType').value; // none/top/bottom
+      const curvedText = document.getElementById('curvedText').value || '';
+      const curvedFont = +document.getElementById('curvedFont').value;
+      const curvedRadiusPx = mmToPx(+document.getElementById('curvedRadius').value);
+
+      // carica immagine
       const img = new Image();
       img.src = URL.createObjectURL(imgInput);
       await img.decode();
 
+      // canvas
       const canvas = document.getElementById('preview');
-      canvas.width = labelWidthPx;
-      canvas.height = labelHeightPx;
+      canvas.width = labelWpx;
+      canvas.height = labelHpx;
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = 'black';
 
-      // Calcolo posizione multi-immagini
-      const perRow = Math.floor((labelWidthPx - offsetX + marginPx) / (imgWidthPx + marginPx));
+      // layout multi immagini (stesso comportamento: partono da offsetX/offsetY)
+      const usableWidth = labelWpx - offsetXpx;
+      const perRow = Math.max(1, Math.floor((usableWidth + gapPx) / (imgWpx + gapPx)));
       const rows = Math.ceil(numImages / perRow);
-      const totalHeight = rows * imgHeightPx + (rows - 1) * marginPx;
 
-      if (imgWidthPx + offsetX > labelWidthPx || totalHeight + offsetY > labelHeightPx) {
+      // calcola bounding box totale delle immagini
+      const totalImgsWidth = Math.min(perRow, numImages) * imgWpx + (Math.min(perRow, numImages) - 1) * gapPx;
+      const totalImgsHeight = rows * imgHpx + (rows - 1) * gapPx;
+
+      // prima controlliamo i limiti generali: immagini con offset
+      if (offsetXpx < 0 || offsetYpx < 0) {
+        alert("⚠️ Offset non può essere negativo.");
+        return;
+      }
+      if (offsetXpx + totalImgsWidth > labelWpx || offsetYpx + totalImgsHeight > labelHpx) {
         alert("⚠️ Alcune immagini superano i limiti dell'etichetta. Controlla misure, offset o orientamento.");
         return;
       }
 
-      for (let i = 0; i < numImages; i++) {
+      // disegniamo immagini e salviamo le bbox di ciascuna immagine per calcoli testo
+      const imgBBoxes = [];
+      for (let i=0;i<numImages;i++) {
         const col = i % perRow;
         const row = Math.floor(i / perRow);
-        const x = offsetX + col * (imgWidthPx + marginPx);
-        const y = offsetY + row * (imgHeightPx + marginPx);
-        ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
+        const x = offsetXpx + col * (imgWpx + gapPx);
+        const y = offsetYpx + row * (imgHpx + gapPx);
+        ctx.drawImage(img, x, y, imgWpx, imgHpx);
+        imgBBoxes.push({x, y, w: imgWpx, h: imgHpx});
       }
 
-      // Conversione in ZPL
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      // funzione per misurare e disegnare testo normale e verificare se esce
+      function drawNormalTextForImage(box, position) {
+        let txt='', fontSize=12, dist=0, x=0, y=0, align='center';
+        ctx.save();
+        if (position === 'top') {
+          txt = textTop; fontSize = fontTop; dist = distTopPx;
+          ctx.font = `${fontSize}px Arial`;
+          x = box.x + box.w/2;
+          y = box.y - dist - (fontSize/2);
+          align = 'center';
+          ctx.textAlign = align; ctx.textBaseline = 'middle';
+          ctx.fillText(txt, x, y);
+          // return bounding
+          const w = ctx.measureText(txt).width;
+          const h = fontSize;
+          ctx.restore();
+          return {left: x - w/2, top: y - h/2, right: x + w/2, bottom: y + h/2};
+        } else if (position === 'bottom') {
+          txt = textBottom; fontSize = fontBottom; dist = distBottomPx;
+          ctx.font = `${fontSize}px Arial`;
+          x = box.x + box.w/2;
+          y = box.y + box.h + dist + (fontSize/2);
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(txt, x, y);
+          const w = ctx.measureText(txt).width; const h = fontSize;
+          ctx.restore();
+          return {left: x - w/2, top: y - h/2, right: x + w/2, bottom: y + h/2};
+        } else if (position === 'left') {
+          txt = textLeft; fontSize = fontLeft; dist = distLeftPx;
+          ctx.font = `${fontSize}px Arial`;
+          // testo verticale centrato rispetto all'immagine, posizionato a sinistra
+          x = box.x - dist - (fontSize/2);
+          y = box.y + box.h/2;
+          // ruotiamo -90° per renderlo "verticale" (opzionale: qui lo lasciamo orizzontale a fianco)
+          // per fruibilità lasciamo orizzontale al fianco
+          ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+          ctx.fillText(txt, x, y);
+          const w = ctx.measureText(txt).width; const h = fontSize;
+          ctx.restore();
+          return {left: x - w, top: y - h/2, right: x, bottom: y + h/2};
+        } else if (position === 'right') {
+          txt = textRight; fontSize = fontRight; dist = distRightPx;
+          ctx.font = `${fontSize}px Arial`;
+          x = box.x + box.w + dist + (fontSize/2);
+          y = box.y + box.h/2;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(txt, x, y);
+          const w = ctx.measureText(txt).width; const h = fontSize;
+          ctx.restore();
+          return {left: x, top: y - h/2, right: x + w, bottom: y + h/2};
+        }
+        ctx.restore();
+        return null;
+      }
+
+      // disegnamo i testi normali e collezioniamo i bounding per verifica
+      const allBounds = [];
+      for (const box of imgBBoxes) {
+        if (topEnabled && textTop) {
+          allBounds.push(drawNormalTextForImage(box, 'top'));
+        }
+        if (bottomEnabled && textBottom) {
+          allBounds.push(drawNormalTextForImage(box, 'bottom'));
+        }
+        if (leftEnabled && textLeft) {
+          allBounds.push(drawNormalTextForImage(box, 'left'));
+        }
+        if (rightEnabled && textRight) {
+          allBounds.push(drawNormalTextForImage(box, 'right'));
+        }
+      }
+
+      // testo curvo sopra/sotto: limiti solamente rispetto all'immagine di riferimento.
+      // Se multi-immagine, applichiamo il curvato alla prima immagine solo (più semplice e tipico)
+      if (curvedType !== 'none' && curvedText) {
+        const refBox = imgBBoxes[0]; // applicato alla prima immagine
+        const cx = refBox.x + refBox.w/2;
+        let cy;
+        let radius = curvedRadiusPx;
+        ctx.fillStyle = 'black';
+        ctx.font = `${curvedFont}px Arial`;
+
+        if (curvedType === 'top') {
+          // centro archetto sopra: cy = top of image - radius
+          cy = refBox.y - radius;
+          // ruotiamo la direzione in drawTextOnArc con clockwise true
+          drawTextOnArc(ctx, curvedText, cx, cy, radius, curvedFont, true);
+          // bounding roughly: arco superiore estende fino a cy - radius - font
+          allBounds.push({left: cx - radius - 50, top: cy - radius - curvedFont, right: cx + radius + 50, bottom: cy + 10});
+        } else {
+          // bottom: centro archetto sotto: cy = bottom + radius
+          cy = refBox.y + refBox.h + radius;
+          // per testo sotto vogliamo capovolgere l'arco (possibile con clockwise=false)
+          drawTextOnArc(ctx, curvedText, cx, cy, radius, curvedFont, false);
+          allBounds.push({left: cx - radius - 50, top: cy - 10, right: cx + radius + 50, bottom: cy + radius + curvedFont});
+        }
+      }
+
+      // verifica se qualche bounding esce dal canvas
+      for (const b of allBounds) {
+        if (!b) continue;
+        if (b.left < 0 || b.top < 0 || b.right > canvas.width || b.bottom > canvas.height) {
+          alert("⚠️ Testo o immagine eccede l'area stampabile. Controlla dimensioni, distanza o offset.");
+          return;
+        }
+      }
+
+      // se siamo qui tutto rientra -> converti canvas in ZPL (bitmap)
+      const imageData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
       let zplData = "";
       const widthBytes = Math.ceil(canvas.width / 8);
       const totalBytes = widthBytes * canvas.height;
 
-      for (let y = 0; y < canvas.height; y++) {
+      for (let y=0;y<canvas.height;y++) {
         let line = "";
-        for (let x = 0; x < canvas.width; x++) {
-          const i = (y * canvas.width + x) * 4;
-          const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
+        for (let x=0;x<canvas.width;x++) {
+          const i = (y*canvas.width + x)*4;
+          const avg = (imageData[i] + imageData[i+1] + imageData[i+2]) / 3;
           line += avg > 127 ? "0" : "1";
         }
         let hex = "";
-        for (let i = 0; i < line.length; i += 8) {
-          hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, '0');
+        for (let i=0;i<line.length;i+=8) {
+          hex += parseInt(line.substr(i,8),2).toString(16).padStart(2,'0');
         }
         zplData += hex.toUpperCase() + "\n";
       }
 
       const zplCode =
         `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n` +
-        `^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+        `^XA\n^FO${offsetXpx},${offsetYpx}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-      const blob = new Blob([zplCode], { type: "text/plain" });
+      // prepariamo download
+      const blob = new Blob([zplCode], {type:'text/plain'});
       const url = URL.createObjectURL(blob);
-      const downloadBtn = document.getElementById('download');
-      downloadBtn.style.display = "inline-block";
-      downloadBtn.onclick = () => {
+      const dl = document.getElementById('download');
+      dl.style.display = 'inline-block';
+      dl.onclick = () => {
         const a = document.createElement('a');
         a.href = url;
-        a.download = "etichetta.zpl";
+        a.download = 'etichetta.zpl';
         a.click();
       };
+
+      alert("Anteprima generata correttamente — puoi scaricare il .zpl se vuoi.");
     });
   </script>
 </body>
