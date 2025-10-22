@@ -199,12 +199,20 @@ document.getElementById('generate').addEventListener('click', async () => {
 
   const zplCode=`~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-  const blob=new Blob([zplCode],{type:"text/plain"});
-  const url=URL.createObjectURL(blob);
-  const downloadBtn=document.getElementById("download");
-  downloadBtn.style.display="inline-block";
-  downloadBtn.onclick=()=>{ const a=document.createElement("a"); a.href=url; a.download="etichetta.zpl"; a.click(); };
-});
+  // --- Creazione e download diretto file .zpl ---
+const blob = new Blob([zplCode], { type: "text/plain" });
+const url = URL.createObjectURL(blob);
+const downloadBtn = document.getElementById("download");
+downloadBtn.style.display = "inline-block";
+downloadBtn.textContent = "Scarica file .zpl";
+downloadBtn.onclick = () => {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "etichetta.zpl"; // 👉 salva direttamente come .zpl
+  a.click();
+  URL.revokeObjectURL(url);
+};
 </script>
 </body>
 </html>
+
