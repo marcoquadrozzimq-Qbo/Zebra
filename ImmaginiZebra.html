@@ -35,11 +35,11 @@ canvas { border: 1px solid #ccc; margin-top: 10px; background: white; display: b
 </label>
 
 <label>Offset X immagine (mm):
-  <input type="number" id="offsetX" value="2" step="0.1">
+  <input type="number" id="offsetX" value="0" step="0.1">
 </label>
 
 <label>Offset Y immagine (mm):
-  <input type="number" id="offsetY" value="2" step="0.1">
+  <input type="number" id="offsetY" value="0" step="0.1">
 </label>
 
 <label>Larghezza immagine (cm):
@@ -104,11 +104,11 @@ document.getElementById('generate').addEventListener('click', async () => {
   const orientation = document.getElementById('orientation').value;
   const offsetX = mmToPx(+document.getElementById('offsetX').value);
   const offsetY = mmToPx(+document.getElementById('offsetY').value);
-  const marginPx = mmToPx(5);
 
   const img = new Image();
+  img.crossOrigin = "anonymous"; // ✅ evita errori di sicurezza
   img.src = URL.createObjectURL(imgInput);
-  await img.decode();
+  await img.decode(); // ✅ attende il caricamento completo
 
   const canvas = document.getElementById('preview');
   const ctx = canvas.getContext('2d');
@@ -124,17 +124,21 @@ document.getElementById('generate').addEventListener('click', async () => {
     ctx.translate(-canvas.height / 2, -canvas.width / 2);
   }
 
-  // disegno immagini in griglia automatica con margine fisso 5mm
-  const perRow = Math.floor((labelWidthPx - offsetX) / (imgWidthPx + marginPx));
+  const startX = offsetX;
+  const startY = offsetY;
+  const marginPx = mmToPx(5);
+
+  const perRow = Math.floor((labelWidthPx - startX) / (imgWidthPx + marginPx));
+  const rows = Math.ceil(numImages / perRow);
+
   for (let i = 0; i < numImages; i++) {
     const col = i % perRow;
     const row = Math.floor(i / perRow);
-    const x = offsetX + col * (imgWidthPx + marginPx);
-    const y = offsetY + row * (imgHeightPx + marginPx);
+    const x = startX + col * (imgWidthPx + marginPx);
+    const y = startY + row * (imgHeightPx + marginPx);
     ctx.drawImage(img, x, y, imgWidthPx, imgHeightPx);
   }
 
-  // disegno testi se abilitati
   if (document.getElementById('enableText').checked) {
     ctx.fillStyle = "black";
     ctx.textAlign = "center";
@@ -147,74 +151,72 @@ document.getElementById('generate').addEventListener('click', async () => {
     const offsetTop = mmToPx(+document.getElementById('offsetTop').value);
     const offsetBottom = mmToPx(+document.getElementById('offsetBottom').value);
 
-    const centerX = offsetX + imgWidthPx / 2;
-    const topY = offsetY - offsetTop;
-    const bottomY = offsetY + imgHeightPx + offsetBottom;
+    const centerX = startX + imgWidthPx / 2;
+    const topY = startY - offsetTop;
+    const bottomY = startY + imgHeightPx + offsetBottom;
 
-    const drawCurvedText = (text, centerX, centerY, radius, angle, invert=false) => {
-      if(!text) return;
+    const drawCurvedText = (text, centerX, centerY, radius, angle, invert = false) => {
+      if (!text) return;
       const chars = text.split("");
-      const totalAngle = (Math.PI * angle)/180;
-      const angleStep = chars.length>1 ? totalAngle/(chars.length-1) : 0;
-      const startAngle = -totalAngle/2;
-      chars.forEach((char,i)=>{
-        const currentAngle = startAngle + i*angleStep;
-        const x = centerX + radius*Math.sin(currentAngle);
-        const y = centerY - (invert?-1:1)*radius*Math.cos(currentAngle);
-        ctx.fillText(char, x, y); // lettere non ruotate
+      const totalAngle = (Math.PI * angle) / 180;
+      const angleStep = chars.length > 1 ? totalAngle / (chars.length - 1) : 0;
+      const startAngle = -totalAngle / 2;
+      chars.forEach((char, i) => {
+        const currentAngle = startAngle + i * angleStep;
+        const x = centerX + radius * Math.sin(currentAngle);
+        const y = centerY - (invert ? -1 : 1) * radius * Math.cos(currentAngle);
+        ctx.fillText(char, x, y); // 👈 lettere non ruotate
       });
     };
 
-    if(textTop) {
-      if(curveTop>0) drawCurvedText(textTop, centerX, topY, 100, curveTop, false);
+    if (textTop) {
+      if (curveTop > 0) drawCurvedText(textTop, centerX, topY, 100, curveTop, false);
       else ctx.fillText(textTop, centerX, topY);
     }
-    if(textBottom) {
-      if(curveBottom>0) drawCurvedText(textBottom, centerX, bottomY, 100, curveBottom, true);
-      else ctx.fillText(textBottom, centerX, bottomY+20);
+    if (textBottom) {
+      if (curveBottom > 0) drawCurvedText(textBottom, centerX, bottomY, 100, curveBottom, true);
+      else ctx.fillText(textBottom, centerX, bottomY + 20);
     }
   }
 
   ctx.restore();
 
-  // Conversione in ZPL
-  const imageData = ctx.getImageData(0,0,canvas.width,canvas.height).data;
+  // --- Conversione in ZPL ---
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   let zplData = "";
-  const widthBytes = Math.ceil(canvas.width/8);
-  const totalBytes = widthBytes*canvas.height;
+  const widthBytes = Math.ceil(canvas.width / 8);
+  const totalBytes = widthBytes * canvas.height;
 
-  for(let y=0;y<canvas.height;y++){
-    let line="";
-    for(let x=0;x<canvas.width;x++){
-      const i=(y*canvas.width+x)*4;
-      const avg=(imageData[i]+imageData[i+1]+imageData[i+2])/3;
-      line+=avg>127?"0":"1";
+  for (let y = 0; y < canvas.height; y++) {
+    let line = "";
+    for (let x = 0; x < canvas.width; x++) {
+      const i = (y * canvas.width + x) * 4;
+      const avg = (imageData[i] + imageData[i + 1] + imageData[i + 2]) / 3;
+      line += avg > 127 ? "0" : "1";
     }
-    let hex="";
-    for(let i=0;i<line.length;i+=8){
-      hex+=parseInt(line.substr(i,8),2).toString(16).padStart(2,"0");
+    let hex = "";
+    for (let i = 0; i < line.length; i += 8) {
+      hex += parseInt(line.substr(i, 8), 2).toString(16).padStart(2, "0");
     }
-    zplData+=hex.toUpperCase()+"\n";
+    zplData += hex.toUpperCase() + "\n";
   }
 
-  const zplCode=`~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
+  const zplCode = `~DGIMAGE.GRF,${totalBytes},${widthBytes},\n${zplData}\n^XA\n^FO${offsetX},${offsetY}\n^XGIMAGE.GRF,1,1^FS\n^XZ`;
 
-  // --- Creazione e download diretto file .zpl ---
-const blob = new Blob([zplCode], { type: "text/plain" });
-const url = URL.createObjectURL(blob);
-const downloadBtn = document.getElementById("download");
-downloadBtn.style.display = "inline-block";
-downloadBtn.textContent = "Scarica file .zpl";
-downloadBtn.onclick = () => {
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "etichetta.zpl"; // 👉 salva direttamente come .zpl
-  a.click();
-  URL.revokeObjectURL(url);
-};
+  // --- Download diretto in formato .zpl ---
+  const blob = new Blob([zplCode], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const downloadBtn = document.getElementById("download");
+  downloadBtn.style.display = "inline-block";
+  downloadBtn.textContent = "Scarica file .zpl";
+  downloadBtn.onclick = () => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "etichetta.zpl"; // ✅ salvataggio diretto
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+});
 </script>
 </body>
 </html>
-
-
-
